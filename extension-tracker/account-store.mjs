@@ -101,8 +101,8 @@ function serialQueue() {
  * Serialized account-partition storage. The legacy bossReadonlyTracker.v2 key is
  * intentionally never read or modified, so old unpartitioned data is not claimed.
  */
-export function createAccountStore(chromeApi = globalThis.chrome, { onStorageEvent } = {}) {
-  const storage = chromeApi?.storage?.local;
+export function createAccountStore(chromeApi = globalThis.chrome, { onStorageEvent, storage: providedStorage } = {}) {
+  const storage = providedStorage || chromeApi?.storage?.local;
   if (!storage?.get || !storage?.set) throw new Error('CHROME_LOCAL_STORAGE_REQUIRED');
   const enqueue = serialQueue();
   const bodies = createConversationBodyStore(storage, storageOperation);

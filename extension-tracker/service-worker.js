@@ -1,4 +1,5 @@
 import { registerPublicRuntime } from './public-runtime.mjs';
+import { createProtectedAccountStorage } from './archive-key.mjs';
 import {
   exportWalk,
   canonicalIdentityKey,
@@ -156,11 +157,12 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
   now = () => Date.now(),
   diagnostics = null,
   onStorageActivity = null,
+  accountStorage = null,
 } = {}) {
   if (!chromeApi?.storage?.local || !chromeApi?.runtime?.id || !chromeApi?.scripting?.executeScript) {
     throw new Error('CHROME_EXTENSION_API_REQUIRED');
   }
-  const accounts = createAccountStore(chromeApi, { onStorageEvent: diagnostics || onStorageActivity
+  const accounts = createAccountStore(chromeApi, { storage: accountStorage, onStorageEvent: diagnostics || onStorageActivity
     ? (event, details) => {
       diagnostics?.record(`storage.${event}`, details);
       onStorageActivity?.();
@@ -859,8 +861,9 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
 }
 
 if (globalThis.chrome?.runtime?.onMessage) {
+  const accountStorage = createProtectedAccountStorage(globalThis.chrome);
   registerPublicRuntime(globalThis.chrome, {
-    createExtensionMessageHandler,
+    createExtensionMessageHandler: (api, options) => createExtensionMessageHandler(api, { ...options, accountStorage }),
     createStoragePortServer,
     isTrustedCollectorSender: trustedCollectorSender,
   });

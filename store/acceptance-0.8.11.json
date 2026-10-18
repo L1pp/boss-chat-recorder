@@ -1,0 +1,53 @@
+{
+  "version": "0.8.11",
+  "verifiedAt": "2026-10-18T12:48:29Z",
+  "environment": {
+    "os": "Windows",
+    "browser": "Chromium 151.0.7922.34",
+    "automation": "Playwright CLI 0.1.18",
+    "profile": "dedicated synthetic-only persistent profile",
+    "network": "browser context offline; external DNS disabled",
+    "productionAccountAccessed": false
+  },
+  "fixtures": [
+    { "accountUid": "demo-account-a", "conversations": 2, "messages": 4 },
+    { "accountUid": "demo-account-b", "conversations": 2, "messages": 3 }
+  ],
+  "nativeChecks": {
+    "allTenProtectedArchiveValuesAreCiphertextEnvelopes": true,
+    "nativeIndexedDbStoresNonExtractableAesGcmCryptoKey": true,
+    "normalActionPopupRuntimeReadsBothAccounts": true,
+    "normalActionPopupExportsMatchFourAndThreeMessages": true,
+    "noCrossAccountConversationContentInExports": true,
+    "serviceWorkerStopObservedThroughNativeCdp": true,
+    "serviceWorkerWakeReadsOriginalKeyAndCiphertext": true,
+    "fullBrowserCloseAndReopenWithSameProfile": true,
+    "coldRestartReadsOriginalKeyAndCiphertext": true,
+    "noReseedingBetweenLifecycleChecks": true
+  },
+  "offlineChecks": {
+    "publicTestsPassed": 175,
+    "developmentTestsPassed": 209,
+    "failed": 0,
+    "publicAllowlistedFiles": 86,
+    "developmentAllowlistedFiles": 96,
+    "generatedBundlesCurrent": true,
+    "pngDimensionsChecked": true
+  },
+  "procedure": [
+    "Load the public 0.8.11 extension in an empty isolated Chromium profile, with networking disabled.",
+    "Seed only the two checked-in synthetic state/runtime fixtures through the protected storage adapter and account store.",
+    "Inspect the ten known archive values in native chrome.storage.local; confirm encrypted envelopes and a non-extractable native IndexedDB CryptoKey.",
+    "Open the real action popup through chrome.action.openPopup; call the normal GET_STATE and EXPORT_AI_INPUT handlers for each synthetic UID. A popup.html opened as a browser tab is deliberately not an authorised action-popup sender.",
+    "Stop the extension worker through ServiceWorker.stopWorker and observe runningStatus=stopped; wake it with normal popup messages and repeat the original-key, original-ciphertext and export checks.",
+    "Close the isolated browser completely, reopen the same persistent profile without reseeding, and repeat all read/export and persistence checks."
+  ],
+  "boundaries": [
+    "Synthetic native-browser lifecycle acceptance; no live BOSS collection or second real-account switching test.",
+    "No whole-library legacy plaintext migration and no claim that every old retained copy is encrypted.",
+    "Storage key names, lightweight popup cache and user exports are outside the encrypted archive boundary.",
+    "A key in the same browser profile does not protect against control of that browser or operating system.",
+    "This record is not Chrome Web Store approval or a test of every supported browser version."
+  ],
+  "storeSubmitted": false
+}

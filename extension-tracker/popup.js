@@ -23,6 +23,15 @@ const actionRequestTimeoutMs = 90000;
 const popupTimeoutStatuses = new Set();
 
 const progressErrorMessages = {
+  ARCHIVE_KEY_MISSING: '本机归档密钥不存在，无法读取加密记录。请保留浏览器配置及已有导出备份。',
+  ARCHIVE_KEY_MISMATCH: '本机密钥与归档不匹配，原记录未改动。',
+  ARCHIVE_KEY_INVALID: '本机归档密钥无效，原记录未改动。',
+  ARCHIVE_KEY_UNAVAILABLE: '暂时无法读取本机归档密钥，请保留当前浏览器配置。',
+  ARCHIVE_CRYPTO_UNAVAILABLE: '当前浏览器无法使用本地加密功能。',
+  ARCHIVE_ACCESS_UNAVAILABLE: '无法限制本地存储访问范围，请使用支持的 Chrome 版本。',
+  ARCHIVE_CIPHERTEXT_INVALID: '本地加密记录格式异常，原记录未改动。',
+  ARCHIVE_DECRYPT_FAILED: '本地归档解密失败，原记录未改动。',
+  ARCHIVE_ENCRYPT_FAILED: '本地归档加密失败，原记录已保留。',
   BULK_STORAGE_TIMEOUT: '扩展本地保存长时间没有进展，采集已暂停。',
   BULK_STORAGE_UNAVAILABLE: '扩展内部保存连接已断开，采集已暂停。',
   SITE_NON_JSON_RESPONSE: '网站接口返回了 HTML 页面而不是 JSON；本轮已停止，可以重试。',

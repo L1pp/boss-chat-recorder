@@ -16,6 +16,7 @@ export const allowedFiles = new Set([
   'extension-tracker/conversation-state.mjs', 'extension-tracker/conversation-store.mjs',
   'extension-tracker/storage-client.mjs', 'extension-tracker/storage-port-server.mjs',
   'extension-tracker/public-runtime.mjs',
+  'extension-tracker/encrypted-storage.mjs', 'extension-tracker/archive-key.mjs',
   'extension-tracker/service-worker.js', 'extension-tracker/popup.html',
   'extension-tracker/popup.js', 'extension-tracker/popup.css',
   'extension-tracker/debug-log.mjs', 'extension-tracker/debug-control.mjs',
@@ -25,12 +26,18 @@ export const allowedFiles = new Set([
   'scripts/account-reader.mjs', 'scripts/build-extension.mjs', 'scripts/check-release.mjs',
   'scripts/extension-api-bulk.mjs', 'scripts/history-api-reader.mjs', 'scripts/generate-demo.mjs',
   'scripts/site-response.mjs',
+  'scripts/generate-store-assets.py',
+  'store/README.md', 'store/listing-zh-CN.md', 'store/privacy-disclosure.md',
+  'store/reviewer-instructions.md', 'store/acceptance-0.8.11.json',
+  'store/assets/icon.svg', 'store/assets/small-promo.png',
+  'store/assets/screenshot-overview.png', 'store/assets/screenshot-no-changes.png',
   'scripts/prepare-public.mjs',
   'scripts/debug-bridge.mjs',
   'tests/account-store.test.mjs', 'tests/account-runtime.test.mjs',
   'tests/conversation-state.test.mjs', 'tests/conversation-store.test.mjs',
   'tests/storage-client.test.mjs', 'tests/storage-port-server.test.mjs',
   'tests/public-runtime.test.mjs',
+  'tests/encrypted-storage.test.mjs', 'tests/archive-key.test.mjs',
   'tests/account-reader.test.mjs', 'tests/account-collector.test.mjs',
   'tests/api-incremental.test.mjs', 'tests/history-api-reader.test.mjs',
   'tests/ai-input.test.mjs', 'tests/demo.test.mjs',
@@ -42,6 +49,7 @@ export const allowedFiles = new Set([
   'tests/debug-control.test.mjs', 'tests/debug-bridge.test.mjs', 'tests/debug-ui.test.mjs',
   'examples/index.html',
 ]);
+for (const size of [16, 32, 48, 128]) allowedFiles.add(`extension-tracker/icons/icon-${size}.png`);
 for (const account of ['account-a', 'account-b']) {
   for (const file of ['state.json', 'runtime.json', 'runtime-no-change.json',
     'ai-export-all.json', 'ai-export-latest.json', 'ai-export-no-change.json']) {
@@ -91,7 +99,20 @@ async function check() {
   const files = await walk(root);
   for (const file of files) {
     if (!allowedFiles.has(file)) throw new Error(`Unexpected file: ${file}`);
-    const contents = await readFile(path.join(root, file), 'utf8');
+    const bytes = await readFile(path.join(root, file));
+    if (file.endsWith('.png')) {
+      if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+        throw new Error(`Invalid PNG asset: ${file}`);
+      }
+      const size = /icon-(\d+)\.png$/u.exec(file)?.[1];
+      const expected = size ? [Number(size), Number(size)] :
+        file.endsWith('small-promo.png') ? [440, 280] : [1280, 800];
+      if (bytes.length < 24 || bytes.readUInt32BE(16) !== expected[0] || bytes.readUInt32BE(20) !== expected[1]) {
+        throw new Error(`Unexpected image dimensions: ${file}`);
+      }
+      continue;
+    }
+    const contents = bytes.toString('utf8');
     for (const [category, pattern] of sensitivePatterns) {
       if (pattern.test(contents)) throw new Error(`Potential ${category}: ${file}`);
     }
@@ -122,6 +143,12 @@ async function check() {
   const manifest = JSON.parse(await readFile(path.join(root, 'extension-tracker/manifest.json'), 'utf8'));
   const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   if (pkg.license !== 'MIT' || manifest.version !== pkg.version) throw new Error('Version or MIT license metadata mismatch');
+  for (const size of [16, 32, 48, 128]) {
+    if (manifest.icons?.[size] !== `icons/icon-${size}.png`) throw new Error('Missing manifest icon');
+  }
+  for (const size of [16, 32, 48]) {
+    if (manifest.action?.default_icon?.[size] !== `icons/icon-${size}.png`) throw new Error('Missing action icon');
+  }
   const permissions = ['activeTab', 'scripting', 'storage', 'unlimitedStorage'];
   if (manifest.manifest_version !== 3 || manifest.permissions?.length !== permissions.length ||
       !permissions.every(permission => manifest.permissions.includes(permission)) ||

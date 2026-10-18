@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Icon</title>
+  <g fill="#365CE5">
+    <rect x="66.56" y="66.56" width="378.88" height="322.05" rx="83.73" />
+    <polygon points="130.97,381.03 244.63,381.03 142.34,445.44" />
+  </g>
+  <g fill="#FFFFFF">
+    <rect x="149.91" y="148.97" width="212.17" height="43.57" rx="15.25" />
+    <rect x="163.17" y="213.38" width="185.65" height="92.83" rx="32.49" />
+  </g>
+  <polygon fill="#365CE5" points="186.38,211.52 325.62,211.52 286.63,255.15 225.37,255.15" />
+</svg>
