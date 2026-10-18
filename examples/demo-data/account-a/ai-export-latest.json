@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "purpose": "boss_chat_facts_for_ai_analysis",
+  "generatedAt": "2026-10-17T12:00:00.000Z",
+  "sourceNamespace": "demo-account-a",
+  "scope": {
+    "requested": "latest_update",
+    "effective": "latest_update",
+    "description": "仅包含本轮实际读取并保存的变化会话；每个会话保留完整已保存消息上下文。",
+    "updateRecordAvailable": true,
+    "noChanges": false,
+    "selectionBasis": "this_run_refreshed_api_keys_or_history_captures",
+    "conversationCount": 1,
+    "fullAccountCoverageVerified": false
+  },
+  "latestUpdate": {
+    "runId": "demo-run-account-a-change",
+    "mode": "demo_incremental",
+    "status": "completed",
+    "startedAt": "2026-10-16T09:00:00.000Z",
+    "finishedAt": "2026-10-16T09:05:00.000Z",
+    "scannedCount": 2,
+    "changedConversationCount": 1,
+    "refreshedCount": 1,
+    "skippedUnchangedCount": 1,
+    "newlySavedMessageCount": 3,
+    "failedCount": 0,
+    "availableRecordsComplete": true,
+    "error": null
+  },
+  "instructions": [
+    "请根据聊天事实进行 AI 分析，不要把关键词或本地机器规则分类当成最终结论。",
+    "判断招聘进展，提取需要我回复的事项、面试邀请及已经确认的时间地点；区分条件性介绍、等待通知、正式邀约、拒绝和我的婉拒。",
+    "保留公司、岗位、HR、最早可取消息时间与最早可取消息发起方；引用 conversationId 和 messageId，让我可以核对和修正。",
+    "最早可取消息不一定是账号历史第一条。availableHistoryComplete 仅表示网站当前提供的该会话历史已读取，不能推断账号全部历史完整。",
+    "sentAt 是明确的实际发送时间；rawTimeLabel 保留原网页标签。没有绝对发送时间时不要将 firstObservedAt 或 lastObservedAt 当作发送时间。",
+    "newlySavedMessageCount 和 firstObservedInLatestUpdate 表示本次首次保存的数据，其中可能是旧历史，不等于今天新发送或新联系。",
+    "结合完整会话上下文和人工补充判断最新进展；图片、语音或附件只提供摘要时，不要推断未读取的内容。",
+    "无变化或证据不足时明确说明；不要凭空补齐职位、进展或面试日程。"
+  ],
+  "conversations": [
+    {
+      "conversationId": "demo-conversation-account-a-shared",
+      "bossId": "demo-hr-shared",
+      "identity": {
+        "company": "示例甲",
+        "hrName": "顾问甲",
+        "hrRole": "招聘顾问",
+        "jobTitle": "客户端工程师"
+      },
+      "firstObservedAt": "2026-10-16T09:01:00.000Z",
+      "lastObservedAt": "2026-10-16T09:05:00.000Z",
+      "firstCommunicationAt": null,
+      "firstAvailableMessageAt": "2026-10-15T09:30:00.000Z",
+      "firstAvailableMessageId": "demo-message-shared",
+      "firstAvailableSender": "hr",
+      "firstAvailableSenderScope": "first_sender_in_saved_available_messages",
+      "historyCoverage": {
+        "availableHistoryComplete": true,
+        "scope": "demo_available_history",
+        "completeReason": "demo_history_boundary_reached",
+        "fullAccountHistoryVerified": false
+      },
+      "latestRefresh": {
+        "runId": "demo-run-account-a-change",
+        "capturedAt": "2026-10-16T09:01:00.000Z",
+        "refreshReason": "demo_message_or_history_changed",
+        "error": null
+      },
+      "messageOrdering": "known_absolute_send_times_ascending_then_undated_in_stored_order",
+      "messages": [
+        {
+          "messageId": "demo-message-shared",
+          "observationId": null,
+          "direction": "hr",
+          "directionEvidence": "demo_participant_match",
+          "kind": "text",
+          "apiType": null,
+          "apiBodyType": null,
+          "text": "欢迎了解示例甲的客户端岗位。",
+          "sentAt": "2026-10-15T09:30:00.000Z",
+          "rawTimeLabel": null,
+          "rawTime": null,
+          "timeSource": "explicit_message_send_time",
+          "firstObservedAt": "2026-10-16T09:01:00.000Z",
+          "lastObservedAt": "2026-10-16T09:01:00.000Z",
+          "firstObservedInLatestUpdate": true
+        },
+        {
+          "messageId": "demo-message-account-a-reply",
+          "observationId": null,
+          "direction": "self",
+          "directionEvidence": "demo_participant_match",
+          "kind": "text",
+          "apiType": null,
+          "apiBodyType": null,
+          "text": "谢谢介绍，我想进一步了解岗位内容。",
+          "sentAt": "2026-10-15T09:35:00.000Z",
+          "rawTimeLabel": null,
+          "rawTime": null,
+          "timeSource": "explicit_message_send_time",
+          "firstObservedAt": "2026-10-16T09:01:00.000Z",
+          "lastObservedAt": "2026-10-16T09:01:00.000Z",
+          "firstObservedInLatestUpdate": true
+        },
+        {
+          "messageId": "demo-message-account-a-image",
+          "observationId": null,
+          "direction": "hr",
+          "directionEvidence": "demo_participant_match",
+          "kind": "attachment",
+          "apiType": null,
+          "apiBodyType": "demo_image",
+          "text": "",
+          "sentAt": "2026-10-15T09:40:00.000Z",
+          "rawTimeLabel": null,
+          "rawTime": null,
+          "timeSource": "explicit_message_send_time",
+          "firstObservedAt": "2026-10-16T09:01:00.000Z",
+          "lastObservedAt": "2026-10-16T09:01:00.000Z",
+          "firstObservedInLatestUpdate": true,
+          "media": {
+            "type": "demo_image",
+            "mediaKinds": [
+              "image"
+            ],
+            "details": [
+              {
+                "field": "name",
+                "value": "合成岗位示意图.png"
+              },
+              {
+                "field": "mimeType",
+                "value": "image/png"
+              },
+              {
+                "field": "width",
+                "value": 640
+              },
+              {
+                "field": "height",
+                "value": 360
+              }
+            ],
+            "contentAvailable": false
+          }
+        }
+      ],
+      "manualUpdates": []
+    }
+  ]
+}

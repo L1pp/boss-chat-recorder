@@ -1,0 +1,55 @@
+{
+  "progressByTab": {
+    "demo-tab-account-b": {
+      "kind": "api_v1",
+      "runId": "demo-run-account-b-change",
+      "runMode": "demo_incremental",
+      "status": "completed",
+      "startedAt": "2026-10-16T10:00:00.000Z",
+      "finishedAt": "2026-10-16T10:05:00.000Z",
+      "updatedAt": "2026-10-16T10:05:00.000Z",
+      "scannedCount": 2,
+      "selectedCount": 1,
+      "refreshedCount": 1,
+      "skippedUnchangedCount": 1,
+      "newMessageCount": 2,
+      "failed": 0,
+      "listBoundaryReached": true,
+      "availableRecordsComplete": true,
+      "selectedApiKeys": [
+        "demo-hr-shared"
+      ],
+      "refreshedApiKeys": [
+        "demo-hr-shared"
+      ],
+      "completedApiKeys": [
+        "demo-hr-shared",
+        "demo-hr-account-b-second"
+      ],
+      "completedKeys": [
+        "demo-conversation-account-b-shared",
+        "demo-conversation-account-b-other"
+      ],
+      "historyResults": {
+        "demo-conversation-account-b-shared": {
+          "refreshedInRunId": "demo-run-account-b-change",
+          "capturedAt": "2026-10-16T10:02:00.000Z",
+          "refreshReason": "demo_message_or_history_changed",
+          "availableHistoryComplete": false,
+          "scope": "demo_partial_history",
+          "completeReason": "demo_page_budget_reached",
+          "pageCount": 1
+        },
+        "demo-conversation-account-b-other": {
+          "refreshedInRunId": "demo-run-account-b-previous",
+          "capturedAt": "2026-10-12T08:03:00.000Z",
+          "refreshReason": "demo_previous_round",
+          "availableHistoryComplete": true,
+          "scope": "demo_available_history",
+          "completeReason": "demo_history_boundary_reached",
+          "pageCount": 1
+        }
+      }
+    }
+  }
+}

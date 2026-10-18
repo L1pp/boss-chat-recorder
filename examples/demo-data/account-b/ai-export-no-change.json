@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "purpose": "boss_chat_facts_for_ai_analysis",
+  "generatedAt": "2026-10-17T12:00:00.000Z",
+  "sourceNamespace": "demo-account-b",
+  "scope": {
+    "requested": "latest_update",
+    "effective": "latest_update",
+    "description": "本轮没有变化会话，conversations 为空；不要据此重复生成全量进展。",
+    "updateRecordAvailable": true,
+    "noChanges": true,
+    "selectionBasis": "this_run_refreshed_api_keys_or_history_captures",
+    "conversationCount": 0,
+    "fullAccountCoverageVerified": false
+  },
+  "latestUpdate": {
+    "runId": "demo-run-account-b-no-change",
+    "mode": "demo_incremental",
+    "status": "completed",
+    "startedAt": "2026-10-17T11:55:00.000Z",
+    "finishedAt": "2026-10-17T11:56:00.000Z",
+    "scannedCount": 2,
+    "changedConversationCount": 0,
+    "refreshedCount": 0,
+    "skippedUnchangedCount": 2,
+    "newlySavedMessageCount": 0,
+    "failedCount": 0,
+    "availableRecordsComplete": true,
+    "error": null
+  },
+  "instructions": [
+    "请根据聊天事实进行 AI 分析，不要把关键词或本地机器规则分类当成最终结论。",
+    "判断招聘进展，提取需要我回复的事项、面试邀请及已经确认的时间地点；区分条件性介绍、等待通知、正式邀约、拒绝和我的婉拒。",
+    "保留公司、岗位、HR、最早可取消息时间与最早可取消息发起方；引用 conversationId 和 messageId，让我可以核对和修正。",
+    "最早可取消息不一定是账号历史第一条。availableHistoryComplete 仅表示网站当前提供的该会话历史已读取，不能推断账号全部历史完整。",
+    "sentAt 是明确的实际发送时间；rawTimeLabel 保留原网页标签。没有绝对发送时间时不要将 firstObservedAt 或 lastObservedAt 当作发送时间。",
+    "newlySavedMessageCount 和 firstObservedInLatestUpdate 表示本次首次保存的数据，其中可能是旧历史，不等于今天新发送或新联系。",
+    "结合完整会话上下文和人工补充判断最新进展；图片、语音或附件只提供摘要时，不要推断未读取的内容。",
+    "无变化或证据不足时明确说明；不要凭空补齐职位、进展或面试日程。"
+  ],
+  "conversations": []
+}

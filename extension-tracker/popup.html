@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BOSS 沟通记录</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">本地记录</p>
+          <h1>BOSS 沟通记录</h1>
+        </div>
+        <button id="refresh" class="icon-button" type="button" aria-label="刷新本地记录状态" title="刷新本地状态">↻</button>
+      </header>
+
+      <section class="account-card" aria-live="polite">
+        <span class="label">本地记录账号</span>
+        <strong id="account">读取本地记录中…</strong>
+      </section>
+
+      <section class="counts" aria-label="当前账号本地记录数">
+        <div><strong id="contact-count">—</strong><span>会话</span></div>
+        <div><strong id="message-count">—</strong><span>消息</span></div>
+      </section>
+
+      <section class="progress-card" aria-live="polite">
+        <span class="label">采集状态</span>
+        <p id="progress">读取本地更新状态</p>
+      </section>
+
+      <p id="status" class="status" role="status">正在读取本地记录缓存。</p>
+
+      <section class="actions" aria-label="采集操作">
+        <button id="update-incremental" class="primary" type="button" disabled>更新变化会话</button>
+        <button id="update-full" type="button" disabled>重新读取全部会话</button>
+        <button id="stop" type="button" disabled>停止更新</button>
+      </section>
+
+      <section class="actions exports" aria-label="导出本地记录账号数据">
+        <button id="export-latest" type="button" disabled>导出本次更新给 AI</button>
+        <button id="export-all" type="button" disabled>导出全部记录给 AI</button>
+        <button id="backup" type="button" disabled>备份当前账号</button>
+      </section>
+
+      <footer>
+        <button id="clear" class="danger" type="button" disabled>清除当前账号本地记录</button>
+        <p>记录保存在此浏览器的本地扩展存储中。</p>
+      </footer>
+    </main>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

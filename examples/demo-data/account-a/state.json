@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 2,
+  "profileNamespace": "demo-account-a",
+  "createdAt": "2026-10-12T08:00:00.000Z",
+  "updatedAt": "2026-10-16T09:05:00.000Z",
+  "contacts": {
+    "demo-conversation-account-a-shared": {
+      "identity": {
+        "company": "示例甲",
+        "hrName": "顾问甲",
+        "hrRole": "招聘顾问",
+        "jobTitle": "客户端工程师",
+        "bossId": "demo-hr-shared"
+      },
+      "firstObservedAt": "2026-10-16T09:01:00.000Z",
+      "lastObservedAt": "2026-10-16T09:05:00.000Z",
+      "historyCoverage": {
+        "availableHistoryComplete": true,
+        "scope": "demo_available_history",
+        "completeReason": "demo_history_boundary_reached"
+      }
+    },
+    "demo-conversation-account-a-other": {
+      "identity": {
+        "company": "示例乙",
+        "hrName": "顾问乙",
+        "hrRole": "人才伙伴",
+        "jobTitle": "产品助理",
+        "bossId": "demo-hr-account-a-second"
+      },
+      "firstObservedAt": "2026-10-12T08:00:00.000Z",
+      "lastObservedAt": "2026-10-12T08:03:00.000Z",
+      "historyCoverage": {
+        "availableHistoryComplete": true,
+        "scope": "demo_available_history",
+        "completeReason": "demo_history_boundary_reached"
+      }
+    }
+  },
+  "messages": {
+    "demo-storage-account-a-shared-1": {
+      "identityKey": "demo-conversation-account-a-shared",
+      "messageId": "demo-message-shared",
+      "direction": "hr",
+      "directionEvidenceQuality": "demo_participant_match",
+      "kind": "text",
+      "contentText": "欢迎了解示例甲的客户端岗位。",
+      "sentAtISO": "2026-10-15T09:30:00.000Z",
+      "rawTimeLabel": null,
+      "firstObservedAt": "2026-10-16T09:01:00.000Z",
+      "lastObservedAt": "2026-10-16T09:01:00.000Z"
+    },
+    "demo-storage-account-a-shared-2": {
+      "identityKey": "demo-conversation-account-a-shared",
+      "messageId": "demo-message-account-a-reply",
+      "direction": "self",
+      "directionEvidenceQuality": "demo_participant_match",
+      "kind": "text",
+      "contentText": "谢谢介绍，我想进一步了解岗位内容。",
+      "sentAtISO": "2026-10-15T09:35:00.000Z",
+      "rawTimeLabel": null,
+      "firstObservedAt": "2026-10-16T09:01:00.000Z",
+      "lastObservedAt": "2026-10-16T09:01:00.000Z"
+    },
+    "demo-storage-account-a-shared-3": {
+      "identityKey": "demo-conversation-account-a-shared",
+      "messageId": "demo-message-account-a-image",
+      "direction": "hr",
+      "directionEvidenceQuality": "demo_participant_match",
+      "kind": "attachment",
+      "contentText": "",
+      "sentAtISO": "2026-10-15T09:40:00.000Z",
+      "rawTimeLabel": null,
+      "firstObservedAt": "2026-10-16T09:01:00.000Z",
+      "lastObservedAt": "2026-10-16T09:01:00.000Z",
+      "apiBodyType": "demo_image",
+      "rawApiMessage": {
+        "body": {
+          "type": "demo_image",
+          "image": {
+            "name": "合成岗位示意图.png",
+            "mimeType": "image/png",
+            "width": 640,
+            "height": 360
+          }
+        }
+      }
+    },
+    "demo-storage-account-a-other": {
+      "identityKey": "demo-conversation-account-a-other",
+      "messageId": "demo-message-account-a-other",
+      "direction": "hr",
+      "directionEvidenceQuality": "demo_participant_match",
+      "kind": "text",
+      "contentText": "这是另一个会话中的合成示例消息。",
+      "sentAtISO": "2026-10-12T08:02:00.000Z",
+      "rawTimeLabel": null,
+      "firstObservedAt": "2026-10-12T08:03:00.000Z",
+      "lastObservedAt": "2026-10-12T08:03:00.000Z"
+    }
+  },
+  "unidentifiedMessages": [],
+  "unassignedObservations": [],
+  "captures": [],
+  "rawSources": {},
+  "initialRowsByKey": {},
+  "closingRowsByKey": {},
+  "listBaselineInitialized": false
+}
