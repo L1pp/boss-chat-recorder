@@ -10,7 +10,7 @@
 
 ## 先看合成演示
 
-0.8.11 的图标、实际扩展合成截图、商店文案和隐私表填写说明见 [store/README.md](store/README.md)。这些是本地提交材料，尚未提交商店；原生加密验收范围见 [store/acceptance-0.8.11.json](store/acceptance-0.8.11.json)。
+0.8.11 已发布到 [Chrome Web Store](https://chromewebstore.google.com/detail/phaihpchfdihnclgjhpmpnhobdcogdhb)。图标、合成截图、商店文案和隐私表说明见 [store/README.md](store/README.md)；原生加密验收范围见 [store/acceptance-0.8.11.json](store/acceptance-0.8.11.json)。
 
 直接用浏览器打开 [examples/index.html](examples/index.html)，无需安装扩展、登录招聘平台或启动服务器。页面可以切换两个合成账号，查看全部记录、最近一次更新和无变化导出。页面内的数据全部虚构，预览没有网络请求。
 
@@ -66,6 +66,8 @@ npm run check
 `build` 只生成本目录中的扩展 bundle；`build:check` 逐字比较生成结果，不改文件。`demo` 重建合成样例。测试使用模拟接口、模拟 Chrome API 和合成数据，不访问 BOSS、真实浏览器或原项目数据。测试临时文件仅放在系统临时目录并清理。
 
 ## 本地加载扩展
+
+公开扩展的 ZIP 打包和商店更新可通过 GitHub Actions 手动运行，操作入口与一次性 Google 认证配置见 [发布说明](docs/RELEASING.md)。默认操作只打包，不访问商店；`status` 只查询商店状态，只有明确选择 `publish` 才会提交审核。构建仅使用本仓库的公开源码，不依赖本机调试桥或个人数据。
 
 1. 运行构建命令。
 2. 打开 `chrome://extensions` 或 `edge://extensions`，开启开发者模式。

@@ -8,8 +8,8 @@ import { generateDemo } from './generate-demo.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const allowedFiles = new Set([
   '.gitattributes', '.gitignore', 'LICENSE', 'README.md', 'package.json',
-  '.github/workflows/ci.yml',
-  'docs/ARCHITECTURE.md', 'docs/PROVENANCE.md', 'docs/VERIFICATION.md',
+  '.github/workflows/ci.yml', '.github/workflows/release.yml',
+  'docs/ARCHITECTURE.md', 'docs/PROVENANCE.md', 'docs/VERIFICATION.md', 'docs/RELEASING.md',
   'extension-tracker/LICENSE', 'extension-tracker/PRIVACY.md',
   'extension-tracker/manifest.json', 'extension-tracker/account-store.mjs',
   'extension-tracker/model.mjs', 'extension-tracker/ai-input.mjs',
@@ -24,6 +24,7 @@ export const allowedFiles = new Set([
   'extension-tracker/analysis/conversation-origin.mjs',
   'extension-tracker/content/account.bundle.js', 'extension-tracker/content/bulk.bundle.js',
   'scripts/account-reader.mjs', 'scripts/build-extension.mjs', 'scripts/check-release.mjs',
+  'scripts/package-extension.mjs', 'scripts/chrome-webstore.mjs',
   'scripts/extension-api-bulk.mjs', 'scripts/history-api-reader.mjs', 'scripts/generate-demo.mjs',
   'scripts/site-response.mjs',
   'scripts/generate-store-assets.py',
@@ -37,6 +38,7 @@ export const allowedFiles = new Set([
   'tests/conversation-state.test.mjs', 'tests/conversation-store.test.mjs',
   'tests/storage-client.test.mjs', 'tests/storage-port-server.test.mjs',
   'tests/public-runtime.test.mjs',
+  'tests/package-extension.test.mjs', 'tests/chrome-webstore.test.mjs',
   'tests/encrypted-storage.test.mjs', 'tests/archive-key.test.mjs',
   'tests/account-reader.test.mjs', 'tests/account-collector.test.mjs',
   'tests/api-incremental.test.mjs', 'tests/history-api-reader.test.mjs',
@@ -80,7 +82,7 @@ async function walk(directory, prefix = '') {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     // Git metadata is allowed only as metadata; it is never inspected or packaged.
-    if (relative === '.git') continue;
+    if (relative === '.git' || relative === 'dist') continue;
     const absolute = path.join(directory, entry.name);
     const stat = await lstat(absolute);
     if (stat.isSymbolicLink()) throw new Error(`Symbolic link is not allowed: ${relative}`);
