@@ -1,6 +1,6 @@
 {
   "name": "boss-chat-recorder-showcase",
-  "version": "0.8.12",
+  "version": "0.8.13",
   "private": true,
   "description": "Local-first BOSS Zhipin chat archiving: read-only collection, incremental updates, account isolation, and factual AI exports.",
   "type": "module",
