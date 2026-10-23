@@ -43,7 +43,7 @@ npm run package:extension -- --output /path/to/extension.zip
 2. 创建专用发布服务账号，不授予它项目 Owner / Editor 等宽泛角色。
 3. 创建 GitHub Workload Identity Pool / OIDC Provider，issuer 为 `https://token.actions.githubusercontent.com`。信任限定到本仓库及 `refs/heads/main`，使用 GitHub 的数字仓库和所有者 ID；不要信任任意 GitHub 仓库。
 4. 在该服务账号上授予对应 GitHub 身份 `roles/iam.workloadIdentityUser`，允许工作流代表该服务账号申请短期令牌。
-5. 在 Chrome 商店开发者后台的发布者账号设置中，填入该服务账号邮箱并保存。Google 当前每个发布者只支持绑定一个服务账号；已有绑定时先确认其用途。
+5. 在 Chrome 商店开发者后台左侧 **PUBLISHER → Settings** 中向下滚动，找到 **Service account**，填入该服务账号邮箱，点击 **Add a service account**。该字段不在 **ACCOUNT → Profile** 页。Google 当前每个发布者只支持绑定一个服务账号；已有绑定时先确认其用途。
 6. 从商店后台 **Publisher → Settings** 获取 Publisher ID。
 7. 在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 设置以下三个变量。这些是资源标识，不是私钥；不要把令牌写进变量。
 
