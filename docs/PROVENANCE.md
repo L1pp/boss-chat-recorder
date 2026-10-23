@@ -1,32 +1,33 @@
-# 代码来源与许可边界
+# Provenance and license scope
 
-此目录为无本机调试桥的公开展示副本。下文早期调试桥记录描述开发版排查历史，不表示本副本提供这些入口。
+[English](PROVENANCE.md) | [简体中文](PROVENANCE_CN.md)
 
-0.8.11 增加公开候选入口使用的 WebCrypto AES-GCM 账号存储适配器、IndexedDB 本机密钥和可信存储访问范围。使用浏览器原生能力，无第三方运行依赖；实现和离线测试为本项目新增，继续沿用 MIT，不改变 0.7.2 采集内核。
+This is the public copy without a local debug bridge. Historical bridge references describe development troubleshooting, not functionality shipped in this copy.
 
-0.8.10 新增扩展内部保存 Port 和基于实际存储活动的等待机制，仍使用原有采集接口及账号边界，没有引入外部运行依赖或新的网站探测。实现和测试为本项目新增，继续沿用 MIT。
+The repository was organized from an explicit list of files in the local prototype and uses the MIT License. The original project, personal browser storage, and real records stayed in their original locations; they were not automatically imported or copied here.
 
-2026-10-17，0.8.10 在真实 Chrome 中完成保留记录后的本轮采集和一次无变化的独立增量，前后导出比对通过。展示目录只记录汇总与验收边界，不收录真实导出、账号 UID 或诊断日志；详见 `VERIFICATION.md`。
+## Collection basis
 
-0.8.9 将正文持久化整理为按会话的新记录版本和账号索引，原始采集接口及 0.7.2 采集内核不变。拆分、重组及存储代码为本项目新增，继续使用 MIT。旧本地正文保留，不向展示目录引入真实内容。
+The baseline is prototype **0.7.2's default API path**, rather than earlier DOM/CDP implementations. It retains same-origin GET, `historyMsg` cursor pagination, deduplication by native message ID, conversation selection by `updateTime`, batch saving, the message-fact model, and AI-oriented JSON exports.
 
-0.8.8 延续 MIT，采集内核仍以 0.7.2 为基准。本次只将高频本地运行态与原聊天正文分开持久化，并保留独立的慢操作诊断摘要；没有增加新的网站请求或 hash 门禁。原正文模型和原本地数据保留。该版本离线测试 161 项通过，当时只有真实运行态读取及进度确认的部分观察；后续结果见 0.8.10 验收。
-
-本目录从原本地原型中按允许清单整理，使用 MIT License。原项目、浏览器存储与真实数据保留在原位置；没有自动导入或复制到展示目录。
-
-开发排查阶段，0.8.6 曾加入仅用于本机诊断的 Node loopback 桥，监听 `127.0.0.1:17374`，权限仅在用户点击连接后请求。该诊断代码不属于核心采集内核；调试服务配置和日志保存在展示版目录之外的本机私有目录。该功能仅保留于开发目录，公开展示副本不包含调试桥或 localhost 可选权限。
-
-采集基准为原型 **0.7.2 的默认 API 路径**，不是更早的 DOM/CDP 实现。保留的基础包括：同源 GET、`historyMsg` 游标分页、原生消息 ID 去重、按 `updateTime` 选择变化会话、批量保存、消息事实模型与 AI 导出。
-
-| 原型基础 | 展示版保留的必要差异 |
+| Prototype basis | Necessary changes retained in the public copy |
 | --- | --- |
-| 联系人列表与历史分页 | 从当前页面取得列表参数，去除原账号的硬编码参数 |
-| 会话级增量与保存 | 按本人 UID 分别保存状态和基线；消息仍按原生 ID 更新 |
-| 页面异步采集、停止与进度 | 启动一次确认账号，后续来源与令牌检查均在本机处理 |
-| 同源 fetch | 扩展请求共用固定 10 秒间隔；异常暂停并保留已取得数据 |
+| Contact lists and history pagination | Discover list parameters from the current page; remove hard-coded personal account parameters |
+| Conversation updates and saving | Separate state and baselines by the owning UID; retain native message IDs |
+| Asynchronous page collection, stop, and progress | Confirm the account once at startup; handle later sender and token checks locally |
+| Same-origin fetch | Share a fixed 10-second interval and pause on errors while retaining acquired data |
 
-0.8.5 收敛掉独立的验证试运行门禁、旧远程复核兼容分支和逐会话总时限，继续使用同一启动/停止/进度流程。0.8.6 让核心存储写入回执不再等待角标和弹窗缓存刷新；另为本机观察加入临时调试桥，不改变采集内核或请求限速。真实复验仍发现本地 checkpoint 回执超时。0.8.7 删除重复的本地 binding/分区读取及冗余深拷贝，保留原子绑定校验，不改存储 schema 或 10 秒请求间隔；该版本 152 项离线测试通过，真实采集当时仅恢复推进并连续保存多批，后续结果见 0.8.10 验收。临时桥及其可选权限保留于开发目录，公开副本已移除。保留单请求超时与本地保存超时，不新增请求数量上限、确认步骤、hash 或指纹校验。展示界面、轻量本地缓存、合成演示和离线测试独立于真实数据。
+The public copy contains that API implementation plus this project's storage, UI, export, and test code. Other collection implementations and generated resources from the original project are not build or runtime dependencies. Any future third-party code or resources must have their applicable copyright and license notices reviewed and preserved.
 
-本展示版仅包含上述 API 采集实现和本项目新增的存储、界面、导出与测试代码。原工程中未纳入本目录的其他采集实现及生成资源，不构成本目录的构建或运行依赖。将来如引入第三方代码或资源，须审查并保留适用的版权和许可声明。
+## Project changes
 
-接口路径、响应字段和 Chrome 扩展 API 的使用不表示获得平台授权；本目录未复制 BOSS 站点脚本、页面抓取、接口响应或真实账号参数。演示数据由生成器手写构造，全部明确标记为合成。
+- **0.8.5:** removed a separate verification trial gate, obsolete remote-recheck compatibility, and per-conversation total deadlines. It retained the same start, stop, and progress flow, single-request timeout, and local-save timeout, without adding request-count caps, confirmation steps, hashes, or fingerprints.
+- **0.8.6:** separated core-save acknowledgements from badge and popup-cache refresh. A temporary Node loopback bridge at `127.0.0.1:17374` supported local diagnosis only after a user connection and permission grant. It could not start collection remotely. Its config and logs stayed in a private directory outside this public copy. The bridge and optional localhost permissions remain absent from the public package.
+- **0.8.7:** removed repeated local binding/partition reads and redundant deep copies while retaining atomic binding validation, the schema, and the 10-second request interval. Its 152 offline tests passed, but early successful batches did not establish a complete real run; later results are recorded under 0.8.10.
+- **0.8.8:** separated high-frequency runtime from chat bodies and retained independent slow-operation summaries. The original body model and local data remained. Its 161 offline tests passed; early real observations covered runtime reads and acknowledgements only, before a later body-save timeout.
+- **0.8.9:** introduced per-conversation version records and an account index while retaining old local bodies. The API and 0.7.2 kernel were unchanged. Splitting, reconstruction, and storage code are project additions under MIT.
+- **0.8.10:** introduced the internal storage Port and waiting based on actual local storage activity, without external runtime dependencies or additional website probes. On 2026-10-17, a real Chrome run resumed retained records to completion, followed by a separate no-change incremental run and export comparison. Only summaries and evidence limits are public; real exports, UIDs, and diagnostic logs are excluded. See [verification](VERIFICATION.md).
+- **0.8.11:** added a WebCrypto AES-GCM account-store adapter, an IndexedDB local key, and trusted-context storage access for the public entry point. These use browser-native capabilities, add no third-party runtime dependency, and retain MIT and the 0.7.2 collection kernel.
+- **0.8.12 (unreleased):** adds first-collection guidance and bilingual UI/documentation while keeping collection, account boundaries, and saved message facts unchanged.
+
+The UI, lightweight local cache, synthetic demo, and offline tests are independent of real user data. API paths, response fields, and Chrome API use do not imply platform authorization. This repository does not copy BOSS site scripts, page captures, API responses, or real account parameters. Demo records are hand-authored by the generator and explicitly marked synthetic.

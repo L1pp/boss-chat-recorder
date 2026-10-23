@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import * as popupI18n from '../extension-tracker/i18n.mjs';
 import { ACCOUNT_STORE_KEY, ACCOUNT_RUNTIME_KEY, createAccountStore } from '../extension-tracker/account-store.mjs';
 import { createExtensionMessageHandler, POPUP_VIEW_KEY } from '../extension-tracker/service-worker.js';
 
@@ -859,9 +860,12 @@ test('popup freezes the selected local archive UID before tab lookup and ignores
     summary: { contactCount, messageCount, unidentifiedObservationCount: 0 }, progress: null,
     verificationRequired: false, verificationRetrying: false, updatedAt: new Date().toISOString() });
   let localView = view('accountA', 4, 40);
-  const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8')
+    .replace(/^import\s+\{[^}]+\}\s+from\s+['"]\.\/i18n\.mjs['"];?\s*/mu, '');
   const context = {
+    ...popupI18n,
     document: {
+      documentElement: {},
       querySelector: selector => elements.get(selector) || null,
       querySelectorAll: selector => selector === '.actions button'
         ? ['#update-incremental', '#update-full', '#stop', '#export-latest', '#export-all', '#backup']
@@ -871,12 +875,15 @@ test('popup freezes the selected local archive UID before tab lookup and ignores
     },
     window: { confirm: () => true, addEventListener() {} },
     chrome: {
+      i18n: { getUILanguage: () => 'zh-CN' },
       tabs: { query: async () => {
         queryCount++;
         if (queryCount === 1) { clearTabQueryStarted(); return queryGate; }
         return [{ id: 1 }];
       } },
-      storage: { local: { get: async key => key === storageKey ? { [storageKey]: structuredClone(localView) } : {} } },
+      storage: { local: { get: async key =>
+        (Array.isArray(key) ? key.includes(storageKey) : key === storageKey)
+          ? { [storageKey]: structuredClone(localView) } : {} } },
       runtime: { sendMessage: async message => {
         if (message.type === 'CLEAR_ACCOUNT') {
           clearMessage = structuredClone(message);

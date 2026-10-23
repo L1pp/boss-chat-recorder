@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import * as popupI18n from '../extension-tracker/i18n.mjs';
 
-const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8')
+  .replace(/^import\s+\{[^}]+\}\s+from\s+['"]\.\/i18n\.mjs['"];?\s*/mu, '');
 const POPUP_VIEW_KEY = 'bossReadonlyTracker.popupView.v1';
 const ids = ['#account', '#contact-count', '#message-count', '#progress', '#status', '#refresh',
   '#update-incremental', '#update-full', '#stop', '#export-latest', '#export-all', '#backup', '#clear'];
@@ -27,7 +29,9 @@ function makePopup(sendMessage, { confirm = true, popupView = {
   let storedPopupView = popupView;
   let storageReads = 0;
   const context = {
+    ...popupI18n,
     document: {
+      documentElement: {},
       querySelector: selector => elements.get(selector) || null,
       querySelectorAll: selector => selector === '.actions button'
         ? ['#update-incremental', '#update-full', '#stop', '#export-latest', '#export-all', '#backup']
@@ -37,11 +41,13 @@ function makePopup(sendMessage, { confirm = true, popupView = {
     },
     window: { confirm: () => confirm, addEventListener() {} },
     chrome: {
+      i18n: { getUILanguage: () => 'zh-CN' },
       tabs: { query: async () => [{ id: 1 }] },
       runtime: { sendMessage },
       storage: { local: { async get(key) {
         storageReads++;
-        return key === POPUP_VIEW_KEY ? { [POPUP_VIEW_KEY]: storedPopupView } : {};
+        return (Array.isArray(key) ? key.includes(POPUP_VIEW_KEY) : key === POPUP_VIEW_KEY)
+          ? { [POPUP_VIEW_KEY]: storedPopupView } : {};
       } } },
     },
     setTimeout(fn, delay) {

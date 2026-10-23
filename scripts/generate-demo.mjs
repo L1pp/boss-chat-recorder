@@ -304,16 +304,18 @@ function htmlFor(accounts) {
     .replaceAll('\u2028', '\\u2028')
     .replaceAll('\u2029', '\\u2029');
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>本地合成演示数据</title>
+  <title>Local synthetic demo</title>
   <style>
     :root { color-scheme: light; font: 16px/1.55 system-ui, sans-serif; color: #172033; background: #f4f6fa; }
     body { max-width: 920px; margin: 0 auto; padding: 28px 18px 56px; }
     .notice, article { background: white; border: 1px solid #dce2eb; border-radius: 12px; padding: 16px; margin: 14px 0; }
     .notice { border-left: 5px solid #3d68c7; }
+    .language-picker { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 16px; }
+    select { font: inherit; border: 1px solid #aab6ca; border-radius: 8px; background: white; padding: 7px 9px; }
     nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
     button { border: 1px solid #aab6ca; border-radius: 8px; background: white; padding: 9px 13px; cursor: pointer; }
     button[aria-pressed="true"] { color: white; background: #254b9b; border-color: #254b9b; }
@@ -327,26 +329,64 @@ function htmlFor(accounts) {
   </style>
 </head>
 <body>
+  <div class="language-picker">
+    <label for="language" data-text="language">Interface language</label>
+    <select id="language">
+      <option value="zh">中文</option>
+      <option value="en">English</option>
+    </select>
+  </div>
   <header class="notice">
-    <strong>合成演示数据</strong>
-    <p>所有账号、消息、时间和图片摘要均为手写示例，不包含真实账号或平台采集记录。页面可离线打开并切换账号与导出范围。</p>
+    <strong data-text="heading">Synthetic demo data</strong>
+    <p data-text="notice">All accounts, messages, timestamps, and image summaries are handwritten examples. No real accounts or platform records are included. This page works offline; switch accounts and export scopes below. Language changes affect the interface only; messages and export data remain in their original language.</p>
   </header>
-  <nav aria-label="选择演示账号">
-    <button type="button" data-account="account-a">求职账号甲</button>
-    <button type="button" data-account="account-b">求职账号乙</button>
+  <nav data-label="accounts" aria-label="Choose a demo account">
+    <button type="button" data-account="account-a" data-text="accountA">Job seeker A</button>
+    <button type="button" data-account="account-b" data-text="accountB">Job seeker B</button>
   </nav>
-  <nav aria-label="选择导出范围">
-    <button type="button" data-scope="latest">本轮变化</button>
-    <button type="button" data-scope="all">全部已保存</button>
-    <button type="button" data-scope="noChange">无变化轮次</button>
+  <nav data-label="scopes" aria-label="Choose an export scope">
+    <button type="button" data-scope="latest" data-text="latest">This round</button>
+    <button type="button" data-scope="all" data-text="all">All saved</button>
+    <button type="button" data-scope="noChange" data-text="noChange">No-change round</button>
   </nav>
   <main id="preview" aria-live="polite"></main>
   <script id="demo-data" type="application/json">${embedded}</script>
   <script>
     const data = JSON.parse(document.getElementById('demo-data').textContent);
     const main = document.getElementById('preview');
+    const languagePicker = document.getElementById('language');
+    const translations = {
+      zh: {
+        title: '本地合成演示数据', heading: '合成演示数据', language: '界面语言',
+        notice: '所有账号、消息、时间和图片摘要均为手写示例，不包含真实账号或平台采集记录。页面可离线打开并切换账号与导出范围。切换语言仅改变界面，消息和导出数据保留原文。',
+        accounts: '选择演示账号', scopes: '选择导出范围',
+        accountA: '求职账号甲', accountB: '求职账号乙',
+        latest: '本轮变化', all: '全部已保存', noChange: '无变化轮次',
+        latestTitle: '本轮已更新的会话', allTitle: '全部已保存的会话', noChangeTitle: '本轮没有变化',
+        conversations: '会话数：', noChanges: '无变化：', yes: '是', no: '否',
+        conversation: '会话 ', hrId: 'HR 标识：', historyComplete: '可用历史完整：',
+        self: '求职者', hr: '招聘方', other: '其他', unknownTime: '时间未知', media: '媒体摘要：',
+      },
+      en: {
+        title: 'Local synthetic demo', heading: 'Synthetic demo data', language: 'Interface language',
+        notice: 'All accounts, messages, timestamps, and image summaries are handwritten examples. No real accounts or platform records are included. This page works offline; switch accounts and export scopes below. Language changes affect the interface only; messages and export data remain in their original language.',
+        accounts: 'Choose a demo account', scopes: 'Choose an export scope',
+        accountA: 'Job seeker A', accountB: 'Job seeker B',
+        latest: 'This round', all: 'All saved', noChange: 'No-change round',
+        latestTitle: 'Conversations updated this round', allTitle: 'All saved conversations', noChangeTitle: 'No changes this round',
+        conversations: 'Conversations: ', noChanges: 'No changes: ', yes: 'Yes', no: 'No',
+        conversation: 'Conversation ', hrId: 'Recruiter ID: ', historyComplete: 'Available history complete: ',
+        self: 'Job seeker', hr: 'Recruiter', other: 'Other', unknownTime: 'Time unknown', media: 'Media summary: ',
+      },
+    };
+    const browserLanguage = navigator.language || navigator.languages?.[0] || '';
+    let language = /^zh(?:-|$)/i.test(browserLanguage) ? 'zh' : 'en';
     let account = 'account-a';
     let scope = 'latest';
+
+    function t(key) {
+      return translations[language][key];
+    }
 
     function addText(parent, tag, value, className) {
       const node = document.createElement(tag);
@@ -357,6 +397,15 @@ function htmlFor(accounts) {
     }
 
     function render() {
+      document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+      document.title = t('title');
+      languagePicker.value = language;
+      document.querySelectorAll('[data-text]').forEach(node => {
+        node.textContent = t(node.dataset.text);
+      });
+      document.querySelectorAll('[data-label]').forEach(node => {
+        node.setAttribute('aria-label', t(node.dataset.label));
+      });
       document.querySelectorAll('[data-account]').forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.account === account));
       });
@@ -365,24 +414,28 @@ function htmlFor(accounts) {
       });
       const input = data[account][scope];
       const fragment = document.createDocumentFragment();
-      addText(fragment, 'h1', (account === 'account-a' ? '求职账号甲' : '求职账号乙') + ' · ' + input.scope.description);
-      addText(fragment, 'p', '会话数：' + input.scope.conversationCount + '；无变化：' + (input.scope.noChanges ? '是' : '否'), 'meta');
+      addText(fragment, 'h1', t(account === 'account-a' ? 'accountA' : 'accountB') + ' · ' + t(scope + 'Title'));
+      addText(fragment, 'p', t('conversations') + input.scope.conversationCount + ' · ' + t('noChanges') + t(input.scope.noChanges ? 'yes' : 'no'), 'meta');
       input.conversations.forEach(conversation => {
         const card = document.createElement('article');
         addText(card, 'h2', conversation.identity.company + ' · ' + conversation.identity.jobTitle);
-        addText(card, 'p', conversation.identity.hrName + ' · ' + conversation.identity.hrRole + ' · 会话 ' + conversation.conversationId, 'meta');
-        addText(card, 'p', 'HR 标识：' + conversation.bossId + '；可用历史完整：' + (conversation.historyCoverage.availableHistoryComplete ? '是' : '否'), 'meta');
+        addText(card, 'p', conversation.identity.hrName + ' · ' + conversation.identity.hrRole + ' · ' + t('conversation') + conversation.conversationId, 'meta');
+        addText(card, 'p', t('hrId') + conversation.bossId + ' · ' + t('historyComplete') + t(conversation.historyCoverage.availableHistoryComplete ? 'yes' : 'no'), 'meta');
         conversation.messages.forEach(message => {
-          const label = message.direction === 'self' ? '求职者' : message.direction === 'hr' ? '招聘方' : '其他';
-          const when = message.sentAt || message.rawTimeLabel || '时间未知';
+          const label = t(message.direction === 'self' ? 'self' : message.direction === 'hr' ? 'hr' : 'other');
+          const when = message.sentAt || message.rawTimeLabel || t('unknownTime');
           addText(card, 'p', label + ' · ' + when + ' · ' + message.text, 'message');
-          if (message.media) addText(card, 'p', '媒体摘要：' + JSON.stringify(message.media), 'media');
+          if (message.media) addText(card, 'p', t('media') + JSON.stringify(message.media), 'media');
         });
         fragment.append(card);
       });
       main.replaceChildren(fragment);
     }
 
+    languagePicker.addEventListener('change', () => {
+      language = languagePicker.value === 'en' ? 'en' : 'zh';
+      render();
+    });
     document.querySelectorAll('[data-account]').forEach(button => button.addEventListener('click', () => {
       account = button.dataset.account;
       render();

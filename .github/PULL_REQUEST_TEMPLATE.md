@@ -1,16 +1,16 @@
-## 改动内容
+## Change
 
-<!-- 简要说明改了什么、解决什么问题。关联 issue 可写在这里。 -->
+<!-- Describe the problem and resulting behavior. Link an issue if relevant. 中文填写亦可。 -->
 
-## 行为与隐私影响
+## Behavior and privacy impact
 
-<!-- 说明是否影响采集、账号分区、权限、加密或导出；无影响可写“无”。 -->
+<!-- Note effects on collection, account separation, permissions, encryption, or export; write “None” if appropriate. 说明行为及隐私影响，无影响可写“无”。 -->
 
-## 检查
+## Validation
 
 - [ ] `npm test`
 - [ ] `npm run check`
-- [ ] 如改动相关：`npm run test:coverage`（仅生成报告，无覆盖率门槛）
-- [ ] 如改动浏览器交互相关：`npm run test:browser`
+- [ ] When relevant: `npm run test:coverage` (report only, no percentage threshold)
+- [ ] For browser interaction changes: `npm run test:browser`
 
-<!-- 说明未运行的相关检查及原因。复现与附件均使用合成数据，不含真实聊天或凭据。 -->
+<!-- Explain relevant checks not run. Use synthetic reproductions and attachments; exclude real chats and credentials. 未运行的检查请说明原因；勿附真实聊天或凭据。 -->

@@ -1,41 +1,47 @@
-# 审核备注草稿
+# Reviewer notes
 
-版本：0.8.11。名称：BOSS 沟通记录本地助手。最低 Chrome 版本：102。
+[English](reviewer-instructions.md) | [简体中文](reviewer-instructions_CN.md)
 
-该扩展是非官方的个人本地沟通记录工具。它仅在用户手动启动后读取其已登录 BOSS 沟通页当前可访问的聊天记录，按账号保存并导出 JSON；不发送消息、不投递简历、不绕过登录或人工验证。
+Baseline version: **0.8.11**. Name: **BOSS 沟通记录本地助手**. Minimum Chrome: **102**. The additional 0.8.12 UI notes below describe an unreleased candidate, not a submitted store update.
 
-## 安装与操作
+This unofficial personal archiving extension reads only chats currently available on the user's signed-in BOSS chat page after a manual start. It saves per-account records locally and exports JSON. It does not send messages, submit resumes, or bypass login or manual verification.
 
-商店运行 ZIP 的根目录包含 `manifest.json`。离线加载时，将运行文件解压到独立目录，在扩展管理页选择“加载已解压的扩展程序”。建议使用单独浏览器配置，避免测试内容与日常记录混合。
+## Installation and operation
 
-新安装且尚无记录时，弹窗应显示本地空状态。打开弹窗、刷新本地状态、导出或清除记录不会额外请求 BOSS；这些操作使用本机记录。弹窗显示的账号代表当前查看的本地归档账号，并不表示重新确认了网站登录状态。
+The store ZIP has `manifest.json` at its root. For unpacked testing, extract runtime files into a separate directory and choose **Load unpacked** in extension management. A separate browser profile avoids mixing test and everyday archives.
 
-真实平台的正常流程如下，需要有权使用的 BOSS 账号及正常登录网页：
+A fresh 0.8.11 installation shows an empty local state. Popup opening, local-state refresh, exports, and clearing use local records without additional BOSS requests. The displayed account is the selected local archive account, not a fresh website-login confirmation.
 
-1. 由使用者在 BOSS 网站正常登录并打开沟通页，等待页面自身会话列表加载。
-2. 打开扩展，点击“更新变化会话”。扩展读取启动时账号，并按固定最小间隔请求列表及历史；可点击“停止更新”。
-3. 完成后导出“全部记录给 AI”；该操作只下载 JSON，不连接 AI 服务。
-4. 再次点击“更新变化会话”。若会话更新时间未变且历史此前已读取完成，相关会话应跳过；变化或未完成会话重新读取网站当前提供的历史。
-5. 如网站要求人工验证，扩展暂停并保留记录；使用者在网站手动验证后再点击继续。扩展不自动探测验证结果。
+A normal live-platform workflow requires a BOSS account that the reviewer is authorized to use and a normal signed-in page:
 
-开发者日常账号及真实聊天不随材料提供。审核人员若无法访问相应网站，请记录该限制并联系开发者安排适当测试条件；合成演示不能替代真实网站登录流程。
+1. Sign in on the website and open [the chat page](https://www.zhipin.com/web/geek/chat). Wait for its own conversation list to load.
+2. Open the extension and start collection. In 0.8.11 this action is labeled “更新变化会话”. The extension confirms the starting account and requests list/history pages at the fixed minimum interval. The stop action is available.
+3. After completion, export all records. This only downloads JSON; it does not connect to an AI service.
+4. Start another incremental update. Conversations with unchanged native timestamps and completed history are skipped. Changed or incomplete conversations reread the currently available history.
+5. If the website requires verification, the extension pauses and retains records. Complete verification manually on the website, then continue. The extension does not automatically probe the result.
 
-## 合成数据与加密验收
+The developer's everyday account credentials and real chats are not included. If reviewers cannot access the website, record that limitation and contact the developer for appropriate test conditions. Synthetic examples do not replace website login.
 
-本次 0.8.11 上架准备使用独立浏览器配置及两个合成账号，不连接真实账号。实际检查结果、浏览器版本和完成范围记录在 [acceptance-0.8.11.json](acceptance-0.8.11.json)，以该文件为准，不能将计划中的步骤视为已通过。
+### Unreleased 0.8.12 interface
 
-检查目标包括：新写入的归档落盘为密文、密钥不可导出、扩展后台重新启动后可读取、浏览器完整关闭并以同一测试配置重启后仍可读取。重新启动后不重新灌入合成数据，以便发现真实持久化问题。
+First use has a dedicated collection guide and chat-page link, rather than calling an empty archive an update. Existing records offer an incremental update, and interrupted runs offer continuation. The popup supports Chinese and English, initially uses Chinese for Chinese browser locales and English for all other or missing locales, and remembers an explicit local language choice. Saved message content is not translated. This section does not claim that the 0.8.11 artwork already shows the new interface.
 
-商店截图来自实际扩展中的合成数据，并标明“合成演示数据”。源码仓库另附 `examples/index.html` 与合成 JSON，用于离线展示账号隔离和导出语义；它不是扩展自带的聊天浏览界面。仓库的 `npm test` 与 `npm run check` 使用离线数据，不请求 BOSS。
+## Synthetic acceptance and encryption
 
-## 存储与权限说明
+The 0.8.11 preparation used an isolated browser profile and two synthetic accounts without a real-account connection. Actual results, browser version, and completed scope are in [acceptance-0.8.11.json](acceptance-0.8.11.json). Planned steps must not be described as completed results.
 
-公开包仅使用 `activeTab`、`scripting`、`storage` 和 `unlimitedStorage`，不申请持续网站权限，不包含 localhost 调试桥或远程代码。用户启动后注入的脚本随包提供，请求使用当前网站已有的会话；扩展不读取或导出 Cookie。
+Acceptance checked ciphertext archive values, a non-extractable key, reading after worker restart, and reading after completely closing and reopening the same browser profile. Synthetic records were not reseeded after restart, so persistence failures could be detected.
 
-新写归档使用本机 AES-256-GCM，密钥由同一浏览器配置的 IndexedDB 自动保存，无密码步骤。UID 键名、轻量界面摘要及用户主动下载的 JSON 不保证密文；旧明文兼容读取，保留的旧记录不整库迁移。该保护不抵御取得浏览器配置或操作系统控制权的程序，也不提供跨设备恢复。
+Store screenshots show synthetic data in the actual extension and are marked “合成演示数据”. The repository also contains `examples/index.html` and synthetic JSON for offline account/export demonstrations; that page is not a chat browser built into the extension. `npm test` and `npm run check` use offline data and do not request BOSS.
 
-真实网站采集范围参见源码中的 [验证记录](../docs/VERIFICATION.md)。本次合成数据验收不新增真实账号测试，也不声称双真实账号切换已经验收。
+## Storage and permissions
 
-## 后续开发者补充
+The public runtime package uses only `activeTab`, `scripting`, `storage`, and `unlimitedStorage`. It has no persistent website permission, localhost debug bridge, or remote code. Injected scripts are bundled with the extension, and requests use the website's existing session. The extension does not read or export Cookies.
 
-隐私政策链接：`https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md`。提交前填入开发者实际支持邮箱，以及后台要求的其他身份或测试说明。本草稿不包含密码、验证码、登录 Cookie、配对令牌或真实聊天。
+New archive writes use local AES-256-GCM. A non-extractable key is automatically stored in the same profile's IndexedDB, without password steps. UID key names, lightweight UI summaries, and user-downloaded JSON are outside the encrypted-body scope. Existing plaintext remains readable without whole-library migration. This protection does not defend against control of the browser profile or operating system and provides no cross-device recovery.
+
+See [verification](../docs/VERIFICATION.md) for real-platform scope. Synthetic acceptance does not add real-account tests or establish two-real-account switching.
+
+## Developer follow-up
+
+Privacy policy: `https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md`. Confirm the developer's support email and any dashboard-required identity or test information before a future submission. This document contains no passwords, verification codes, login Cookies, pairing tokens, or real chats.

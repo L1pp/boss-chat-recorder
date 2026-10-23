@@ -12,6 +12,9 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const runtimeFiles = Object.freeze([
   'LICENSE',
   'PRIVACY.md',
+  '_locales/en/messages.json',
+  '_locales/zh_CN/messages.json',
+  '_locales/zh_TW/messages.json',
   'account-store.mjs',
   'ai-input.mjs',
   'analysis/conversation-origin.mjs',
@@ -25,6 +28,7 @@ export const runtimeFiles = Object.freeze([
   'icons/icon-16.png',
   'icons/icon-32.png',
   'icons/icon-48.png',
+  'i18n.mjs',
   'manifest.json',
   'model.mjs',
   'popup.css',

@@ -15,6 +15,9 @@ const forbiddenRoots = new Set(['.github', 'data', 'docs', 'examples', 'scripts'
 const expectedRuntimeFiles = Object.freeze([
   'LICENSE',
   'PRIVACY.md',
+  '_locales/en/messages.json',
+  '_locales/zh_CN/messages.json',
+  '_locales/zh_TW/messages.json',
   'account-store.mjs',
   'ai-input.mjs',
   'analysis/conversation-origin.mjs',
@@ -28,6 +31,7 @@ const expectedRuntimeFiles = Object.freeze([
   'icons/icon-16.png',
   'icons/icon-32.png',
   'icons/icon-48.png',
+  'i18n.mjs',
   'manifest.json',
   'model.mjs',
   'popup.css',
@@ -116,8 +120,8 @@ async function assertPackageContents(info) {
   const zipBytes = await readFile(info.path);
   assert.equal(info.bytes, zipBytes.length);
   const entries = parseStoredZip(zipBytes);
-  assert.equal(info.fileCount, 24);
-  assert.equal(entries.length, 24);
+  assert.equal(info.fileCount, 28);
+  assert.equal(entries.length, 28);
   assert.deepEqual(runtimeFiles, expectedRuntimeFiles, 'packaging list matches the reviewed public runtime scope');
   assert.deepEqual(entries.map(entry => entry.name), expectedRuntimeFiles, 'archive path list matches the public runtime scope');
 
@@ -125,6 +129,15 @@ async function assertPackageContents(info) {
   assert.equal(names.has('manifest.json'), true, 'manifest is at ZIP root');
   assert.equal(names.has('extension-tracker/manifest.json'), false, 'extension directory is not nested in ZIP');
   assert.equal(names.has('package.json'), false);
+  const manifest = JSON.parse(entries.find(entry => entry.name === 'manifest.json').data.toString('utf8'));
+  assert.equal(manifest.default_locale, 'en');
+  for (const locale of ['en', 'zh_CN', 'zh_TW']) {
+    const messages = JSON.parse(entries.find(entry => entry.name === `_locales/${locale}/messages.json`).data.toString('utf8'));
+    for (const field of ['name', 'description']) {
+      const key = /^__MSG_(\w+)__$/u.exec(manifest[field])?.[1];
+      assert.ok(key && messages[key]?.message, `${locale} resolves manifest ${field}`);
+    }
+  }
   for (const name of names) {
     assert.equal(name.startsWith('/') || name.includes('\\'), false, `archive path is relative: ${name}`);
     assert.equal(forbiddenRoots.has(name.split('/')[0]), false, `non-runtime project area is excluded: ${name}`);

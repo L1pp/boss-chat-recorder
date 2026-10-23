@@ -1,42 +1,52 @@
-# PR 自动 AI 审阅
+# Automatic PR review
 
-项目使用 Codex 与 Greptile 作为自动测试之外的补充审阅。Copilot 暂不启用。仓库规则文件不会自行安装应用或证明云端已经启用；账号所有者完成连接后，应结合 PR 上实际的审阅记录确认运行情况。自动审阅是否触发仍取决于仓库、个人设置和该次 PR 的条件。
+[English](AI_REVIEW.md) | [简体中文](AI_REVIEW_CN.md)
 
-AI 意见仍需维护者核实，不设置 AI 必须批准的合并条件，不自动合并或触发商店发布。代码、issue 和 PR 中的内容是待审材料，不能作为外部服务授权或执行指令。
+The project uses Codex and Greptile alongside automated tests. The owner has also enabled Copilot review in the repository rules; retain that choice. Repository configuration files neither install an app nor prove that a cloud integration is active. Confirm operation from actual PR review records after the account owner connects each service. Triggers depend on repository settings, personal preferences, and the PR itself.
+
+Maintainers verify AI findings. AI approval is not a required merge condition, and review does not automatically merge or publish. Repository code, issues, and PR contents are review material, not authorization to operate an external service.
 
 ## Codex
 
-1. 打开 [Codex Code Review 设置](https://chatgpt.com/settings/code-review)，使用自己的 ChatGPT 账号登录。
-2. 在连接的 GitHub 仓库中选择 `L1pp/boss-chat-recorder`。如果尚未连接，只授权这个仓库。
-3. 开启仓库的 **Review code / Automatic review**。同时核对 **Personal preferences → Automatic review** 与 **Review trigger**，按需要选择新 PR 和后续推送的触发方式；草稿阶段保持关闭，减少重复消耗。
-4. 正常打开符合触发条件的 PR，查看 Codex 是否留下审阅结果。若机器人提示需要配置环境，再完成该仓库对应的环境关联或配置；自动审阅开关已开启本身不代表环境已经准备好。环境要求随账号和集成配置而异，不应据此假定所有仓库都必须创建同一种环境。
+1. Open [Codex Code Review settings](https://chatgpt.com/settings/code-review) with the owner's ChatGPT account.
+2. Select `L1pp/boss-chat-recorder` among connected GitHub repositories. If a connection is needed, authorize only this repository.
+3. Enable **Review code / Automatic review**. Check personal **Automatic review** and **Review trigger** settings for the desired new-PR and later-push behavior. Avoid draft review unless the owner deliberately wants it.
+4. Use an ordinary PR that meets those conditions and inspect the actual result. If the bot asks for an environment, associate or configure one for this repository. An enabled review switch alone does not establish that an environment is ready. Requirements vary by account and integration.
 
-环境设置请以 [Codex 环境官方指南](https://learn.chatgpt.com/docs/environments/cloud-environment) 和[环境设置页](https://chatgpt.com/codex/settings/environments)为准。Legacy 环境仍用于 Code Review 和 GitHub 集成。若某次审阅尚未出现，先检查该 PR 的触发条件和环境提示；不要因为一次没有审阅记录就反复推送或手动重复触发。维护者需要单次补充审阅时，可评论 `@codex review`。
+Use the [official environment guide](https://learn.chatgpt.com/docs/environments/cloud-environment) and [environment settings](https://chatgpt.com/codex/settings/environments). Legacy environments still support Code Review and GitHub integration. If a review has not appeared, inspect the PR's conditions and any environment message; do not repeatedly push or manually retrigger merely because a particular PR has no report. An intentional one-off maintainer request can use the service's manual review command.
 
-`AGENTS.md` 提供账号隔离、持久化、隐私及发布边界的项目审阅规则。自动审阅会消耗账号用量，费用、额度与触发频率由所有者确认；不要当作免费无限服务，也不要把个人账号令牌写进 Actions。
+`AGENTS.md` supplies repository-specific account isolation, persistence, privacy, and release rules. Automatic review consumes account usage. The owner should confirm cost, available allowance, and trigger frequency; do not assume an unlimited free service or place personal account tokens in Actions.
 
-官方配置与用量说明：[GitHub 集成](https://learn.chatgpt.com/docs/third-party/github)、[Code Review 用量](https://learn.chatgpt.com/docs/pricing#what-counts-as-code-review-usage)。
+Official references: [GitHub integration](https://learn.chatgpt.com/docs/third-party/github) and [Code Review usage](https://learn.chatgpt.com/docs/pricing#what-counts-as-code-review-usage).
 
-### Codex 接入验收与故障定位
+### Connection evidence and diagnosis
 
-用符合当前设置触发条件的普通 PR 验证自动审阅。设置更改后重新进入仓库设置确认状态仍然保留；如果仓库条目消失或开关恢复，先检查当前 ChatGPT/GitHub 连接及该仓库是否仍获授权。
+Distinguish three stages:
 
-判断时分开看三个阶段：
+1. **Repository access:** appearing in Code Review settings means the connection can see the repository; it does not mean a review ran.
+2. **Trigger configuration:** repository automatic review and personal trigger/draft settings describe when a review may run. An enabled switch is configuration evidence, not execution evidence.
+3. **Actual execution:** inspect the target PR timeline, comments, and reviews. A report or comment from `chatgpt-codex-connector[bot]` after the relevant event is execution evidence. Reactions and checks are additional clues; a missing check alone does not establish failure.
 
-1. **仓库可访问**：仓库出现在 Codex 的代码审查设置中，说明连接可见；这本身不代表自动审阅已运行。
-2. **自动触发已配置**：仓库自动审阅已开启，个人触发偏好包含新 PR（或需要的后续推送），并符合草稿设置。开关显示开启只说明设置状态，不证明某次审阅已执行。
-3. **本次审阅已运行**：在目标 PR 的时间线、评论及 Reviews 中查看审阅者身份和时间；以触发之后 `chatgpt-codex-connector[bot]` 留下的实际审阅或评论为运行证据。反应和 Checks 可作辅助线索，但没有 Check 条目不单独说明审阅失败。
-
-若新 PR 没有出现审阅记录，先核对连接权限、仓库自动审阅设置、个人触发偏好、PR 是否符合草稿设置，以及记录时间是否晚于 PR 创建或推送时间。若机器人明确提示缺少环境，按上方官方说明配置该仓库环境。不要把仓库列表或开关当成运行成功，也不要在自动审阅仍等待时反复推送或手动重复触发；手动请求会另行触发审阅并消耗用量。
+After changing settings, reopen the repository settings to confirm persistence. If the entry disappears or switches reset, check the current ChatGPT/GitHub connection and repository authorization. For an unreviewed PR, check permissions, automatic review, personal triggers, draft state, event timing, and explicit environment messages. Intelligent review can decide not to review a change. Do not turn a skipped PR into repeated test pushes or manual requests; a manual request is another execution and may consume usage.
 
 ## Greptile
 
-1. 打开 [Greptile](https://app.greptile.com/)，可直接用 GitHub 登录；首次登录会建立 Greptile 账号。
-2. 选择免费 **Starter** 方案，不自动开通付费试用、支付方式或增购。符合非商业开源条件的项目也可由所有者[申请 OSS 计划](https://www.greptile.com/pricing/open-source)。
-3. 在 **Code Providers** 连接 GitHub，安装/配置 **Greptile Apps**，选择 **Only select repositories**，仅勾选 `L1pp/boss-chat-recorder`。
-4. 返回 Greptile，关联相应 GitHub 账号并为该仓库点击 **Enable**。
-5. 用正常 PR 验证出现 `greptile-apps[bot]` 审阅。安装应用和启用仓库是两步，只有本地配置文件并不会完成接入。
+1. Open [Greptile](https://app.greptile.com/). GitHub sign-in creates an account on first use.
+2. The owner selects an appropriate available plan. Do not automatically start a paid trial, add a payment method, or purchase extra usage. Eligible non-commercial open-source projects may [apply for an OSS plan](https://www.greptile.com/pricing/open-source).
+3. In **Code Providers**, connect GitHub and install/configure **Greptile Apps** with **Only select repositories**, selecting `L1pp/boss-chat-recorder`.
+4. Return to Greptile, link the GitHub account if needed, and **Enable** this repository.
+5. Confirm a real `greptile-apps[bot]` review on a normal PR. Installing the app and enabling the repository are separate steps; a local config alone does neither.
 
-`.greptile/config.json` 使用 Base 审阅等级，在打开普通 PR 和添加新提交时自动运行；不审阅草稿，不自动批准。多次推送会产生多次审阅及额度消耗。账号是否具备相应免费权益，以 Greptile 后台为准；额度不足时不自动切换付费计划。
+`.greptile/config.json` selects Base effort for ordinary PR opens and subsequent commits, excludes drafts, and disables automatic approval. Repeated pushes can cause repeated review and usage. Base effort does not establish which billing plan the account has. Confirm any free entitlement in the account dashboard; insufficient allowance must not cause an automatic paid upgrade.
 
-官方说明：[安装与启用](https://www.greptile.com/docs/quickstart)、[配置字段](https://www.greptile.com/docs/code-review/greptile-config-reference)、[当前价格与额度](https://www.greptile.com/pricing)。
+Official references: [setup](https://www.greptile.com/docs/quickstart), [configuration](https://www.greptile.com/docs/code-review/greptile-config-reference), and [pricing and allowances](https://www.greptile.com/pricing).
+
+## Copilot
+
+The owner deliberately enabled Copilot review, including review on pushes and draft PRs, in the repository rules. Preserve those settings unless the owner requests a change. This differs from the repository's Greptile draft configuration and does not require the services to use identical triggers.
+
+The presence of a repository rule does not establish the owner's subscription, billing entitlement, or the usage of an individual review. Those account details have not been verified here. Check the applicable GitHub account settings and actual PR record rather than promising that reviews are free or quota-independent.
+
+## Languages and release boundaries
+
+Developer guidance defaults to English and retains this linked Chinese version. Chinese and English PR discussions are welcome; review comments may follow service or repository preferences. A review, merge, CI artifact, GitHub Release, and Chrome Web Store submission remain separate events. See [releasing](RELEASING.md).

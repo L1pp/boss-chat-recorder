@@ -1,9 +1,13 @@
-# 安全问题报告
+# Security reporting
 
-本说明适用于本公开仓库中的源码、扩展包和相关脚本。项目由个人维护，不提供响应时限、漏洞赏金或持续支持承诺。
+[English](SECURITY.md) | [简体中文](SECURITY_CN.md)
 
-请将疑似安全漏洞发送至 **destiniye2008@gmail.com**，不要通过公开 issue、合并请求或讨论区披露漏洞细节。请提供受影响版本、影响范围、最小复现步骤和可行的修复建议；优先使用合成数据。
+This policy covers the source, extension packages, and related scripts in this public repository. The project is maintained by an individual and does not offer a response-time commitment, bug bounty, or ongoing support guarantee.
 
-报告中不要包含真实聊天、UID、招聘方联系方式、完整导出文件、Cookie、验证码、配对令牌、私钥或其他可登录账号的资料。请勿把完整真实日志或数据库作为附件。若复现需要敏感信息，请先删减为能够说明问题的最小片段。
+Send suspected vulnerabilities to **destiniye2008@gmail.com**. Do not disclose vulnerability details in public issues, pull requests, or discussions. Include affected versions, impact, minimal reproduction steps, and a possible fix if available. Prefer synthetic data.
 
-维护者会在有时间时查看报告并评估影响；不承诺确认或修复时限。披露前请给维护者合理时间评估和处理问题。项目没有正式的受支持版本列表；若问题涉及扩展版本，请注明版本号和浏览器版本。
+Do not include real chats, account UIDs, recruiter contact details, complete exports, Cookies, verification codes, pairing tokens, private keys, or information that can access an account. Do not attach a complete real log or database. If reproduction needs sensitive information, reduce it to the smallest redacted example that demonstrates the problem.
+
+The maintainer reviews reports and assesses impact as time allows, without a guaranteed acknowledgement or fix deadline. Allow reasonable time for assessment and remediation before disclosure. There is no formal supported-version list; for extension issues, include the extension and browser versions.
+
+Reports in Chinese or English are welcome. 中文报告请参阅[安全问题报告](SECURITY_CN.md)。

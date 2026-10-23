@@ -2,7 +2,7 @@
   "name": "boss-chat-recorder-showcase",
   "version": "0.8.12",
   "private": true,
-  "description": "本地优先的求职沟通归档扩展：分页采集、增量同步、账号隔离和 AI 事实导出。",
+  "description": "Local-first BOSS Zhipin chat archiving: read-only collection, incremental updates, account isolation, and factual AI exports.",
   "type": "module",
   "license": "MIT",
   "engines": {

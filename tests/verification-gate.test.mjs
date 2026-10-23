@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { createAccountStore } from '../extension-tracker/account-store.mjs';
 import { createExtensionMessageHandler } from '../extension-tracker/service-worker.js';
 
@@ -95,6 +96,25 @@ function pageSender(tabId) {
   return { id: 'verification-test', url: CHAT_URL, tab: { id: tabId, url: CHAT_URL } };
 }
 
+test('verification toolbar hints use the browser locale without reading language preferences', async () => {
+  for (const locale of ['zh_CN', 'en']) {
+    const messages = JSON.parse(await readFile(new URL(
+      `../extension-tracker/_locales/${locale}/messages.json`, import.meta.url), 'utf8'));
+    const h = makeHarness();
+    h.chromeApi.i18n = { getMessage: key => messages[key]?.message || '' };
+    h.addPage(1, 'accountA');
+    const run = await start(h, 1);
+    await sendProgress(h, 1, 'accountA', run.progress.collectionToken, {
+      ...run.progress, state: 'failed', status: 'failed', active: false,
+      errorCode: 'SITE_VERIFICATION_REQUIRED', finishedAt: new Date().toISOString(),
+    });
+    await ui(h, 'GET_STATE', 1);
+    assert.equal(h.badges.get(1).text, '!');
+    assert.equal(h.badges.get(1).title, messages.verificationRequired.message);
+    assert.equal(h.pages.get(1).startCount, 1);
+  }
+});
+
 async function ui(harness, type, tabId, fields = {}) {
   const page = harness.pages.get(tabId);
   const message = { type, ...fields };
@@ -158,7 +178,7 @@ test('verification is a terminal progress error; the user can continue through t
   assert.equal(state.progress.errorCode, 'SITE_VERIFICATION_REQUIRED');
   assert.equal(Object.hasOwn((await h.store.getAccount('accountA')).runtime, 'verificationRequired'), false,
     'new runs do not create a separate verification gate');
-  assert.equal(h.badges.get(1).text, '验');
+  assert.equal(h.badges.get(1).text, '!');
   assert.equal(page.startCount, 2, 'a verification response does not start another collection');
 
   const continued = await start(h, 1, 'RESUME_AFTER_VERIFICATION');
