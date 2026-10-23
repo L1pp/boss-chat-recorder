@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BOSS 沟通记录本地助手",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "description": "按当前 BOSS 账号保存沟通记录，并导出供用户自行分析的事实数据。",
   "permissions": [
     "activeTab",

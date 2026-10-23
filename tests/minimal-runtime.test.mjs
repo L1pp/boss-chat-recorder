@@ -115,6 +115,36 @@ async function start(harness, tabId, accountUid, type = 'START_UPDATE') {
   return ui(harness, type, tabId, { expectedAccountUid: accountUid, mode: 'incremental' });
 }
 
+test('collection starts only on the existing supported chat URL and rejects other pages before account reads', async () => {
+  for (const url of [
+    'https://www.zhipin.com/',
+    'https://www.zhipin.com/web/geek/job',
+    'https://www.zhipin.com/web/geek/chatting',
+    'https://www.zhipin.com/web/passport/zp/verify.html',
+    'https://www.zhipin.com.example.org/web/geek/chat',
+    'http://www.zhipin.com/web/geek/chat',
+  ]) {
+    const h = makeHarness();
+    const page = h.addPage(1, 'accountA');
+    h.tabs.set(1, { id: 1, url });
+    const result = await ui(h, 'START_UPDATE', 1, { mode: 'incremental' });
+    assert.equal(result.ok, false, url);
+    assert.equal(result.error, 'UNSUPPORTED_PAGE', url);
+    assert.equal(page.accountReads, 0, 'wrong pages must not request website identity');
+    assert.equal(page.loadedFiles.length, 0, 'wrong pages must not receive collector scripts');
+    assert.equal(page.startCount, 0, 'wrong pages must not start collection');
+  }
+  for (const url of [CHAT_URL, `${CHAT_URL}/`, `${CHAT_URL}?ka=header-message#conversation`]) {
+    const h = makeHarness();
+    const page = h.addPage(1, 'accountA');
+    h.tabs.set(1, { id: 1, url });
+    const result = await ui(h, 'START_UPDATE', 1, { mode: 'incremental' });
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(page.startCount, 1);
+    assert.equal(page.accountReads, 1);
+  }
+});
+
 test('running checkpoints and polling never read or write the chat body', async () => {
   const h = makeHarness();
   const page = h.addPage(1, 'accountA');

@@ -22,7 +22,7 @@ npm run test:coverage
 真实浏览器测试使用 Playwright 和合成数据。首次安装开发依赖并下载 Chromium 后运行：
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run test:browser:install
 npm run test:browser
 ```

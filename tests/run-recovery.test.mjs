@@ -232,7 +232,7 @@ test('a running update disables duplicate starts, shows counters, and keeps STOP
       return { ok: true, accountUid: 'accountA', progress: running };
     }
     throw new Error(`Unexpected request ${message.type}`);
-  });
+  }, { popupView: { accountUid: 'accountA', summary: { contactCount: 10, messageCount: 264 }, progress: null } });
   await popup.settle();
   await popup.elements.get('#update-incremental').listeners.get('click')();
 
@@ -332,7 +332,7 @@ test('a successful progress poll clears a prior timeout status', async () => {
   const nextPoll = [...popup.timers.values()].find(timer => timer.delay === 10000);
   assert.ok(nextPoll);
   await popup.fireTimer(nextPoll);
-  assert.equal(popup.elements.get('#status').textContent, '当前账号记录已加载。');
+  assert.equal(popup.elements.get('#status').textContent, '本机记录已加载。');
 });
 
 test('a successful progress poll does not replace an active foreground action prompt', async () => {
@@ -347,7 +347,7 @@ test('a successful progress poll does not replace an active foreground action pr
     if (message.type === 'GET_BULK_PROGRESS') { progressPolls++; return pollGate.promise; }
     if (message.type === 'START_UPDATE') { stored = running; return startGate.promise; }
     throw new Error(`Unexpected request ${message.type}`);
-  });
+  }, { popupView: { accountUid: 'accountA', summary: { contactCount: 1, messageCount: 2 }, progress: null } });
   await popup.settle();
   const pollTimer = [...popup.timers.values()].find(timer => timer.delay === 10000);
   assert.ok(pollTimer);

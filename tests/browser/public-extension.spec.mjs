@@ -48,6 +48,46 @@ test.afterEach(async () => {
   if (current) await current.finish();
 });
 
+test('first-run guidance uses the local empty view and existing records restore the update actions', async ({}, testInfo) => {
+  const operationPage = await harness.openPopupPage();
+  await operationPage.evaluate(async () => {
+    await chrome.storage.local.set({ 'bossReadonlyTracker.popupView.v1': {
+      accountUid: 'demo-first-run', summary: { contactCount: 0, messageCount: 0 },
+      progress: null, verificationRequired: false, updatedAt: '2026-10-23T12:00:00.000Z',
+    } });
+  });
+  const firstRunPage = await harness.openPopupPage();
+  await expect(firstRunPage.locator('#first-run-guide')).toBeVisible();
+  await expect(firstRunPage.locator('#open-chat-page')).toHaveAttribute('href', 'https://www.zhipin.com/web/geek/chat');
+  await expect(firstRunPage.locator('#open-chat-page')).toHaveAttribute('target', '_blank');
+  await expect(firstRunPage.locator('#open-chat-page')).toHaveAttribute('rel', /noopener/u);
+  await expect(firstRunPage.locator('#update-incremental')).toHaveText('开始首次采集');
+  await expect(firstRunPage.locator('#update-incremental')).toBeEnabled();
+  await expect(firstRunPage.locator('#counts')).toBeHidden();
+  await expect(firstRunPage.locator('#account-card')).toBeHidden();
+  await expect(firstRunPage.locator('#progress-card')).toBeHidden();
+  await expect(firstRunPage.locator('#update-full')).toBeHidden();
+  await expect(firstRunPage.locator('#stop')).toBeHidden();
+  await expect(firstRunPage.locator('#export-actions')).toBeHidden();
+  await expect(firstRunPage.locator('#record-tools')).toBeHidden();
+  const firstRunShot = testInfo.outputPath('first-run.png');
+  await firstRunPage.locator('main').screenshot({ path: firstRunShot });
+  await testInfo.attach('first-run', { path: firstRunShot, contentType: 'image/png' });
+  await firstRunPage.close();
+
+  await seedBothAccounts(operationPage);
+  await extensionPageOperation(operationPage, 'get-state', { accountUid: accountA });
+  const recordsPage = await harness.openPopupPage();
+  await expect(recordsPage.locator('#first-run-guide')).toBeHidden();
+  await expect(recordsPage.locator('#counts')).toBeVisible();
+  await expect(recordsPage.locator('#update-incremental')).toHaveText('更新变化会话');
+  await expect(recordsPage.locator('#export-actions')).toBeVisible();
+  const recordsShot = testInfo.outputPath('existing-records.png');
+  await recordsPage.locator('main').screenshot({ path: recordsShot });
+  await testInfo.attach('existing-records', { path: recordsShot, contentType: 'image/png' });
+  expect(harness.externalRequests).toEqual([]);
+});
+
 test('the public archive is encrypted in native storage and the popup reads the real cached account view', async () => {
   const operationPage = await harness.openPopupPage();
   const initialViews = await seedBothAccounts(operationPage);
