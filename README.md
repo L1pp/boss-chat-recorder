@@ -15,6 +15,8 @@
 
 0.8.11 已发布到 [Chrome Web Store](https://chromewebstore.google.com/detail/phaihpchfdihnclgjhpmpnhobdcogdhb)。图标、合成截图、商店文案和隐私表说明见 [store/README.md](store/README.md)；原生加密验收范围见 [store/acceptance-0.8.11.json](store/acceptance-0.8.11.json)。
 
+当前源码准备 0.8.12：首次打开使用“开始首次采集”引导，已有记录和中断任务显示对应操作，并提供沟通页入口。该版本通过正式 PR、自动测试与审阅流程后，再由 GitHub 发布工作流打包；尚未发布到商店。
+
 直接用浏览器打开 [examples/index.html](examples/index.html)，无需安装扩展、登录招聘平台或启动服务器。页面可以切换两个合成账号，查看全部记录、最近一次更新和无变化导出。页面内的数据全部虚构，预览没有网络请求。
 
 两个合成账号故意复用一个招聘者 ID 和一个消息 ID，但保留不同会话内容；另含图片摘要、未完成历史和未知发送时间，用于说明隔离与证据范围。

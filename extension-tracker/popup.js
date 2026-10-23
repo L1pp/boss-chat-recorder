@@ -5,6 +5,12 @@ const progressLabel = document.querySelector('#progress');
 const statusLabel = document.querySelector('#status');
 const updateIncrementalButton = document.querySelector('#update-incremental');
 const updateFullButton = document.querySelector('#update-full');
+const accountCard = document.querySelector('#account-card');
+const progressCard = document.querySelector('#progress-card');
+const firstRunGuide = document.querySelector('#first-run-guide');
+const countsSection = document.querySelector('#counts');
+const exportActions = document.querySelector('#export-actions');
+const recordTools = document.querySelector('#record-tools');
 const POPUP_VIEW_STORAGE_KEY = 'bossReadonlyTracker.popupView.v1';
 const controlButtons = [...document.querySelectorAll('.actions button'), document.querySelector('#clear')];
 const mutationButtons = ['#update-incremental', '#update-full', '#clear']
@@ -13,10 +19,17 @@ let currentAccountUid = null;
 let viewEpoch = 0;
 let mutationCount = 0;
 let lastProgress = null;
+let summaryIsKnownEmpty = false;
+let hasCollectionHistory = null;
+let firstRunWelcome = false;
+let firstStartRetryAvailable = false;
+let firstRunStarting = false;
+let firstCollectionInThisPopup = false;
 let stateRefreshPromise = null;
 let progressRefreshPromise = null;
 let progressTimer = null;
 let legacyPopupViewLookupAttempted = false;
+let legacyPopupViewConfirmedEmpty = false;
 const foregroundActions = [];
 const requestDeadlines = { GET_BULK_PROGRESS: 30000 };
 const actionRequestTimeoutMs = 90000;
@@ -46,10 +59,10 @@ const progressErrorMessages = {
 popupTimeoutStatuses.add(progressErrorMessages.POPUP_REQUEST_TIMEOUT);
 popupTimeoutStatuses.add(progressErrorMessages.TAB_QUERY_TIMEOUT);
 const progressStateNames = {
-  running: '正在更新', stopping: '正在保存停止前已读取的内容', completed: '已完成', interrupted: '上次更新已中断，可继续更新',
-  failed: '更新失败，可重试', stopped: '已停止',
+  running: '正在更新', stopping: '正在保存停止前已读取的内容', completed: '已完成', interrupted: '上次采集已中断，可继续采集',
+  failed: '更新失败，可重试', stopped: '采集已停止，可继续', paused: '采集已暂停，可继续',
 };
-const terminalStates = new Set(['completed', 'interrupted', 'failed', 'stopped']);
+const terminalStates = new Set(['completed', 'interrupted', 'failed', 'stopped', 'paused']);
 
 function progressState(progress) {
   return progress?.status || progress?.state || '未知';
@@ -65,21 +78,40 @@ function progressFromResponse(result) {
     verificationRequired: required };
 }
 
+function resolveCollectionHistory(declared, summary, progress, fallback = null) {
+  const hasSavedRecords = ['contactCount', 'messageCount'].some(key =>
+    Number.isFinite(summary?.[key]) && summary[key] > 0);
+  if (declared === true || progress || hasSavedRecords) return true;
+  if (declared === false) return false;
+  return fallback;
+}
+
+function unknownEmptyView() {
+  return Boolean(currentAccountUid) && hasCollectionHistory === null && summaryIsKnownEmpty && !lastProgress;
+}
+
 function popupViewFromPayload(payload, fallbackAccountUid = currentAccountUid) {
   if (!payload || typeof payload !== 'object') return null;
   const source = payload.view && typeof payload.view === 'object'
     ? { ...payload.view, ...payload } : payload;
   const accountUid = source.accountUid || source.localAccountUid || null;
   if (!accountUid) return null;
+  const displayedCount = element => {
+    const value = Number(element?.textContent);
+    return Number.isFinite(value) ? value : null;
+  };
   const fallback = fallbackAccountUid === accountUid ? {
-    summary: { contactCount: Number(contactCount.textContent) || 0, messageCount: Number(messageCount.textContent) || 0 },
+    summary: { contactCount: displayedCount(contactCount), messageCount: displayedCount(messageCount) },
     progress: lastProgress,
+    hasCollectionHistory,
   } : null;
   const summary = source.summary && typeof source.summary === 'object' ? source.summary :
-    fallback?.summary || { contactCount: 0, messageCount: 0 };
+    fallback?.summary || { contactCount: null, messageCount: null };
   const progress = Object.hasOwn(source, 'progress') || typeof source.verificationRequired === 'boolean'
     ? progressFromResponse(source) : fallback?.progress || null;
+  const history = resolveCollectionHistory(source.hasCollectionHistory, summary, progress, fallback?.hasCollectionHistory);
   return { ok: true, accountUid: String(accountUid), summary, progress,
+    hasCollectionHistory: history,
     verificationRequired: source.verificationRequired,
     updatedAt: source.updatedAt || fallback?.updatedAt || null };
 }
@@ -125,6 +157,42 @@ function isProgressRunning(progress) {
     (progressState(progress) === 'running' && progress?.active !== false);
 }
 
+function canResumeProgress(progress) {
+  return !verificationWaiting(progress) && !isProgressRunning(progress) &&
+    ['interrupted', 'failed', 'stopped', 'paused'].includes(progressState(progress));
+}
+
+function primaryActionLabel() {
+  if (firstRunStarting) return currentAccountUid ? '正在启动首次采集…' : '正在确认账号并启动…';
+  if (verificationWaiting(lastProgress)) return '我已完成验证，继续采集';
+  if (firstStartRetryAvailable && !currentAccountUid) return '开始首次采集';
+  if (lastProgress?.finalizing === true || progressState(lastProgress) === 'stopping') {
+    if (summaryIsKnownEmpty || firstCollectionInThisPopup) return '正在保存采集内容';
+    return '更新变化会话';
+  }
+  if (isProgressRunning(lastProgress)) {
+    return summaryIsKnownEmpty || firstCollectionInThisPopup ? '正在采集' : '正在更新';
+  }
+  if (canResumeProgress(lastProgress)) return '继续上次采集';
+  if (unknownEmptyView()) return '开始采集';
+  return firstRunWelcome ? '开始首次采集' : '更新变化会话';
+}
+
+function updateViewVisibility() {
+  const running = isProgressRunning(lastProgress);
+  const waitingForVerification = verificationWaiting(lastProgress);
+  const onboarding = firstRunWelcome || firstRunStarting;
+  if (accountCard) accountCard.hidden = firstRunWelcome || firstRunStarting;
+  if (progressCard) progressCard.hidden = firstRunWelcome;
+  if (firstRunGuide) firstRunGuide.hidden = !firstRunWelcome;
+  if (countsSection) countsSection.hidden = onboarding;
+  if (exportActions) exportActions.hidden = onboarding;
+  if (recordTools) recordTools.hidden = onboarding;
+  if (updateFullButton) updateFullButton.hidden = onboarding || running || waitingForVerification;
+  const stopButton = document.querySelector('#stop');
+  if (stopButton) stopButton.hidden = firstRunWelcome || !running;
+}
+
 function diagnosticForProgress(progress) {
   if (!progress) return '';
   if (progress.finalizing === true) return '';
@@ -162,6 +230,9 @@ function operationStatus(type, progress) {
   if (isProgressRunning(progress)) {
     if (state === 'failed') return '采集遇到错误，正在保存此前已读取的内容。';
     if (state === 'interrupted') return '更新已中断，正在保存此前已读取的内容。';
+    if (type === 'START_UPDATE' && firstCollectionInThisPopup) {
+      return '首次采集已启动，正在读取当前账号可读取的会话。';
+    }
     if (type === 'EXPORT_AI_INPUT') return 'AI 输入已导出；后台更新仍在进行。';
     if (type === 'EXPORT_ACCOUNT_BACKUP') return '账号备份已导出；后台更新仍在进行。';
     return '更新任务已启动，正在后台继续。';
@@ -195,13 +266,16 @@ function setEnabled(enabled) {
   }
   const waitingForVerification = verificationWaiting(lastProgress);
   if (updateIncrementalButton) {
-    updateIncrementalButton.textContent = waitingForVerification ? '我已完成验证，继续采集' : '更新变化会话';
-    updateIncrementalButton.disabled = !enabled || (busy && mutationButtons.includes(updateIncrementalButton)) ||
+    updateIncrementalButton.textContent = primaryActionLabel();
+    const mayStartWithoutUid = firstRunWelcome || firstStartRetryAvailable;
+    updateIncrementalButton.disabled = (!enabled && !mayStartWithoutUid) ||
+      (busy && mutationButtons.includes(updateIncrementalButton)) ||
       running;
   }
   if (updateFullButton) {
     updateFullButton.disabled = updateFullButton.disabled || running || waitingForVerification;
   }
+  updateViewVisibility();
 }
 
 function setBackgroundStatus(message) {
@@ -213,14 +287,22 @@ function setMutationBusy(busy) {
   setEnabled(Boolean(currentAccountUid));
 }
 
-function clearView(message) {
+function clearView(message, { welcome = false, preserveFirstStartRetry = false } = {}) {
   viewEpoch++;
   currentAccountUid = null;
   lastProgress = null;
+  firstRunStarting = false;
+  firstCollectionInThisPopup = false;
+  summaryIsKnownEmpty = welcome;
+  hasCollectionHistory = welcome ? false : null;
+  firstRunWelcome = welcome;
+  if (welcome) firstStartRetryAvailable = false;
+  else if (!preserveFirstStartRetry) firstStartRetryAvailable = false;
+  if (!welcome) legacyPopupViewConfirmedEmpty = false;
   accountLabel.textContent = '尚无本地记录';
   contactCount.textContent = '—';
   messageCount.textContent = '—';
-  progressLabel.textContent = '尚无可显示的本地更新记录';
+  progressLabel.textContent = welcome ? '尚未采集' : '尚无可显示的本地更新记录';
   statusLabel.textContent = message;
   setEnabled(true);
 }
@@ -279,12 +361,15 @@ async function withTimeout(promise, timeoutMs, code) {
 function renderProgress(progress) {
   lastProgress = progress || null;
   if (!progress) {
-    progressLabel.textContent = '尚无更新记录';
+    progressLabel.textContent = firstRunWelcome ? '尚未采集' : '尚无更新记录';
     setEnabled(Boolean(currentAccountUid));
     return;
   }
   const state = progressState(progress);
-  const parts = [progressName(progress)];
+  if (terminalStates.has(state)) firstCollectionInThisPopup = false;
+  const label = state === 'running' && (summaryIsKnownEmpty || firstCollectionInThisPopup)
+    ? '正在采集' : progressName(progress);
+  const parts = [label];
   const checked = Number.isFinite(progress.completed) ? progress.completed : progress.scannedCount;
   const total = Number.isFinite(progress.discovered) ? progress.discovered : progress.currentScopeCount;
   if (Number.isFinite(checked) && Number.isFinite(total)) parts.push(`检查 ${checked}/${total}`);
@@ -299,20 +384,34 @@ function renderProgress(progress) {
   setEnabled(Boolean(currentAccountUid));
 }
 
-function applyState(result) {
+function applyState(result, { preserveFirstCollection = false } = {}) {
   if (!result?.accountUid || !result.summary) {
     clearView(statusForError(result?.error));
     return false;
   }
   currentAccountUid = result.accountUid;
+  firstRunStarting = false;
+  if (!preserveFirstCollection) firstCollectionInThisPopup = false;
+  legacyPopupViewConfirmedEmpty = false;
   accountLabel.textContent = result.accountUid;
-  contactCount.textContent = String(result.summary.contactCount ?? 0);
-  messageCount.textContent = String(result.summary.messageCount ?? 0);
+  const contactCountKnown = Number.isFinite(result.summary.contactCount);
+  const messageCountKnown = Number.isFinite(result.summary.messageCount);
+  contactCount.textContent = contactCountKnown ? String(result.summary.contactCount) : '—';
+  messageCount.textContent = messageCountKnown ? String(result.summary.messageCount) : '—';
+  summaryIsKnownEmpty = contactCountKnown && messageCountKnown &&
+    result.summary.contactCount === 0 && result.summary.messageCount === 0;
   const progress = progressFromResponse(result);
-  setEnabled(true);
+  hasCollectionHistory = resolveCollectionHistory(result.hasCollectionHistory, result.summary, progress);
+  firstRunWelcome = hasCollectionHistory === false && summaryIsKnownEmpty && !progress;
+  firstStartRetryAvailable = false;
   renderProgress(progress);
   const cacheTime = result.updatedAt ? new Date(result.updatedAt).toLocaleString() : null;
-  setBackgroundStatus(cacheTime ? `已显示本地记录缓存（${cacheTime}）。` : '已显示本地记录缓存。');
+  const diagnostic = diagnosticForProgress(progress);
+  if (diagnostic) setBackgroundStatus(diagnostic);
+  else if (['failed', 'interrupted'].includes(progressState(progress))) {
+    setBackgroundStatus(progressName(progress));
+  } else if (firstRunWelcome) setBackgroundStatus('准备好后，点击下方按钮开始。');
+  else setBackgroundStatus(cacheTime ? `已显示本地记录缓存（${cacheTime}）。` : '已显示本地记录缓存。');
   return true;
 }
 
@@ -339,21 +438,33 @@ async function refreshState({ quiet = false, force = false } = {}) {
         if (quiet && currentAccountUid && !isProgressRunning(lastProgress)) setBackgroundStatus('已显示本地记录缓存。');
         return result;
       }
+      let legacyResult = null;
       if (!legacyPopupViewLookupAttempted) {
         legacyPopupViewLookupAttempted = true;
-        const legacyResult = await withTimeout(chrome.runtime.sendMessage({ type: 'GET_STATE' }),
+        legacyResult = await withTimeout(chrome.runtime.sendMessage({ type: 'GET_STATE' }),
           30000, 'POPUP_REQUEST_TIMEOUT');
         if (epoch !== viewEpoch) return null;
         const migratedView = popupViewFromPayload(legacyResult, null);
         if (legacyResult?.ok && migratedView?.accountUid) {
+          legacyPopupViewConfirmedEmpty = false;
           applyState(migratedView);
           return migratedView;
         }
+        if (['ACCOUNT_UID_REQUIRED', 'NO_LOCAL_ACCOUNT'].includes(legacyResult?.error)) {
+          legacyPopupViewConfirmedEmpty = true;
+        } else if (legacyResult?.error) {
+          clearView(statusForError(legacyResult.error));
+          return null;
+        }
       }
-      clearView('尚无本地记录缓存。点击“更新变化会话”开始采集。');
+      if (legacyPopupViewConfirmedEmpty) {
+        clearView('尚无本地记录。打开 BOSS 直聘沟通页后，可开始首次采集。', { welcome: true });
+      } else {
+        clearView('尚无本地记录缓存。请刷新状态后重试。');
+      }
       return result;
-    } catch {
-      if (epoch === viewEpoch) clearView('无法读取本地记录，请重试。');
+    } catch (error) {
+      if (epoch === viewEpoch) clearView(statusForError(error?.message));
       return null;
     }
   })();
@@ -401,11 +512,39 @@ async function refreshProgress() {
         return;
       }
       if (result.summary) {
-        contactCount.textContent = String(result.summary.contactCount ?? 0);
-        messageCount.textContent = String(result.summary.messageCount ?? 0);
+        const contactCountKnown = Number.isFinite(result.summary.contactCount);
+        const messageCountKnown = Number.isFinite(result.summary.messageCount);
+        contactCount.textContent = contactCountKnown ? String(result.summary.contactCount) : '—';
+        messageCount.textContent = messageCountKnown ? String(result.summary.messageCount) : '—';
+        summaryIsKnownEmpty = contactCountKnown && messageCountKnown &&
+          result.summary.contactCount === 0 && result.summary.messageCount === 0;
       }
+      const wasFirstRunWelcome = firstRunWelcome;
       const progress = progressFromResponse(result);
+      const displayedSummary = result.summary || {
+        contactCount: Number.isFinite(Number(contactCount.textContent)) ? Number(contactCount.textContent) : null,
+        messageCount: Number.isFinite(Number(messageCount.textContent)) ? Number(messageCount.textContent) : null,
+      };
+      hasCollectionHistory = resolveCollectionHistory(result.hasCollectionHistory, displayedSummary,
+        progress, hasCollectionHistory);
+      firstRunWelcome = hasCollectionHistory === false && summaryIsKnownEmpty && !progress;
       renderProgress(progress);
+      const diagnostic = diagnosticForProgress(progress);
+      if (diagnostic) setBackgroundStatus(diagnostic);
+      else if (['failed', 'interrupted'].includes(progressState(progress))) {
+        setBackgroundStatus(progressName(progress));
+      } else if (wasFirstRunWelcome &&
+        (progress?.finalizing === true || progressState(progress) === 'stopping')) {
+        setBackgroundStatus('正在保存停止前已读取的内容。');
+      } else if (wasFirstRunWelcome && progress && isProgressRunning(progress)) {
+        setBackgroundStatus('首次采集已启动，正在读取当前账号可读取的会话。');
+      } else if (wasFirstRunWelcome && progressState(progress) === 'completed') {
+        setBackgroundStatus('首次采集已完成。');
+      } else if (wasFirstRunWelcome && ['paused', 'stopped'].includes(progressState(progress))) {
+        setBackgroundStatus(progressName(progress));
+      } else if (wasFirstRunWelcome && !firstRunWelcome) {
+        setBackgroundStatus('本机记录已加载。');
+      }
       if (popupTimeoutStatuses.has(statusLabel.textContent)) {
         setBackgroundStatus('当前账号记录已加载。');
       }
@@ -432,9 +571,20 @@ function downloadJson(value, filename) {
 async function runAction(label, action, onSuccess = null, { mutation = false, allowBusy = false,
   messageType = '' } = {}) {
   const firstStart = !currentAccountUid && messageType === 'START_UPDATE';
+  const firstCollectionStart = (firstRunWelcome || firstStartRetryAvailable) && messageType === 'START_UPDATE';
   if ((!currentAccountUid && !firstStart) || (mutation && mutationCount > 0 && !allowBusy)) return;
   const startingUid = currentAccountUid;
   const epoch = viewEpoch;
+  const wasFirstRunWelcome = firstRunWelcome;
+  const wasFirstStartRetryAvailable = firstStartRetryAvailable;
+  if (firstCollectionStart) {
+    firstRunWelcome = false;
+    firstStartRetryAvailable = true;
+    firstRunStarting = true;
+    firstCollectionInThisPopup = true;
+    summaryIsKnownEmpty = true;
+    progressLabel.textContent = '正在启动首次采集…';
+  }
   if (foregroundActions.length === 0 && progressTimer !== null) {
     clearTimeout(progressTimer);
     progressTimer = null;
@@ -448,15 +598,24 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
     if (epoch !== viewEpoch) return;
     if (!result?.ok) {
       if (result?.error === 'ACCOUNT_CONTEXT_CHANGED') {
+        firstRunStarting = false;
+        firstCollectionInThisPopup = false;
         const viewUid = result.accountUid || result.view?.accountUid || '新账号';
         const message = `本地记录账号已切换为 ${viewUid}；本次操作未执行。`;
         await adoptLocalViewAfterSwitch(result, startingUid, message);
         return;
       }
+      if (firstCollectionStart) {
+        firstRunWelcome = wasFirstRunWelcome;
+        firstStartRetryAvailable = wasFirstRunWelcome || wasFirstStartRetryAvailable;
+        firstRunStarting = false;
+        firstCollectionInThisPopup = false;
+        setEnabled(Boolean(currentAccountUid));
+      }
       statusLabel.textContent = statusForError(result?.error);
       if (['UNSUPPORTED_PAGE', 'TAB_NOT_AVAILABLE', 'ACCOUNT_IDENTITY_UNAVAILABLE',
         'SITE_VERIFICATION_REQUIRED'].includes(result?.error)) {
-        clearView(statusForError(result.error));
+        clearView(statusForError(result.error), { preserveFirstStartRetry: firstCollectionStart });
       }
       return;
     }
@@ -468,8 +627,19 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
       return;
     }
     if (firstStart && !result.accountUid) {
+      if (firstCollectionStart) {
+        firstRunWelcome = wasFirstRunWelcome;
+        firstStartRetryAvailable = wasFirstRunWelcome || wasFirstStartRetryAvailable;
+        firstRunStarting = false;
+        firstCollectionInThisPopup = false;
+        setEnabled(Boolean(currentAccountUid));
+      }
       statusLabel.textContent = '扩展未返回已确认的本地记录账号，请重试。';
       return;
+    }
+    if (firstCollectionStart) {
+      firstRunStarting = false;
+      firstStartRetryAvailable = false;
     }
     const viewPayload = messageType === 'CLEAR_ACCOUNT' && result.cleared && !Object.hasOwn(result, 'progress')
       ? { ...result, progress: null } : result;
@@ -477,7 +647,7 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
     const updatesLocalView = ['START_UPDATE', 'STOP_UPDATE', 'CLEAR_ACCOUNT']
       .includes(messageType) || Boolean(result.view);
     if (switchedDuringStart) viewEpoch++;
-    if (view && updatesLocalView) applyState(view);
+    if (view && updatesLocalView) applyState(view, { preserveFirstCollection: firstCollectionStart });
     if (onSuccess) onSuccess(result);
     const latestProgress = progressFromResponse(viewPayload) || (updatesLocalView ? view?.progress : lastProgress);
     if (updatesLocalView && view) renderProgress(latestProgress || null);
@@ -486,7 +656,16 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
       ? `已按当前登录账号 ${result.accountUid} 开始采集。`
       : operationStatus(messageType, latestProgress);
   } catch {
-    if (epoch === viewEpoch) statusLabel.textContent = statusForError('POPUP_REQUEST_TIMEOUT');
+    if (epoch === viewEpoch) {
+      if (firstCollectionStart) {
+        firstRunWelcome = wasFirstRunWelcome;
+        firstStartRetryAvailable = wasFirstRunWelcome || wasFirstStartRetryAvailable;
+        firstRunStarting = false;
+        firstCollectionInThisPopup = false;
+        setEnabled(Boolean(currentAccountUid));
+      }
+      statusLabel.textContent = statusForError('POPUP_REQUEST_TIMEOUT');
+    }
   } finally {
     const index = foregroundActions.lastIndexOf(foregroundAction);
     if (index >= 0) foregroundActions.splice(index, 1);
@@ -508,7 +687,9 @@ document.querySelector('#update-incremental').addEventListener('click', () => {
       { mutation: true, messageType: 'START_UPDATE' });
   }
   if (isProgressRunning(lastProgress)) return;
-  return runAction('正在更新变化会话…',
+  const startLabel = firstRunWelcome ? '正在启动首次采集…' :
+    unknownEmptyView() ? '正在启动采集…' : '正在更新变化会话…';
+  return runAction(startLabel,
     expectedUid => request('START_UPDATE', { mode: 'incremental' }, expectedUid), null,
     { mutation: true, messageType: 'START_UPDATE' });
 });

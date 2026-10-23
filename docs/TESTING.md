@@ -39,6 +39,7 @@ Linux 若缺少浏览器系统库，运行 `npm run test:browser:install -- --wi
 测试按公开包清单实际加载扩展，用仓库中的两个合成账号和生产存储模块播种数据，验证：
 
 - 真实 `chrome.storage.local` 的受保护归档为密文，原生 IndexedDB 的 AES-GCM CryptoKey 不可导出，popup 能显示本地缓存。
+- 使用空记录和已有记录的合成本地缓存，验证首次引导、主按钮与操作区域的实际浏览器显示，并保存合成界面截图。
 - 两个合成账号复用招聘者与消息 ID 时，导出和清除仍按账号隔离。
 - 真正停止并唤醒扩展 worker、完全关闭 Chromium 后以同一临时 profile 重启，无需重新播种即可读取和导出。
 

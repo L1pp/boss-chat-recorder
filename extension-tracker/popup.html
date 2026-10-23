@@ -16,36 +16,45 @@
         <button id="refresh" class="icon-button" type="button" aria-label="刷新本地记录状态" title="刷新本地状态">↻</button>
       </header>
 
-      <section class="account-card" aria-live="polite">
+      <section id="account-card" class="account-card" aria-live="polite" hidden>
         <span class="label">本地记录账号</span>
         <strong id="account">读取本地记录中…</strong>
       </section>
 
-      <section class="counts" aria-label="当前账号本地记录数">
+      <section id="counts" class="counts" aria-label="当前账号本地记录数" hidden>
         <div><strong id="contact-count">—</strong><span>会话</span></div>
         <div><strong id="message-count">—</strong><span>消息</span></div>
       </section>
 
-      <section class="progress-card" aria-live="polite">
+      <section id="progress-card" class="progress-card" aria-live="polite" hidden>
         <span class="label">采集状态</span>
-        <p id="progress">读取本地更新状态</p>
+        <p id="progress">正在读取本地记录状态…</p>
       </section>
 
-      <p id="status" class="status" role="status">正在读取本地记录缓存。</p>
+      <p id="status" class="status" role="status">正在读取本机记录…</p>
+
+      <section id="first-run-guide" class="first-run-guide" aria-label="首次采集说明" hidden>
+        <p class="guide-title">开始保存沟通记录</p>
+        <ol>
+          <li><a id="open-chat-page" href="https://www.zhipin.com/web/geek/chat" target="_blank" rel="noopener noreferrer">打开 BOSS 沟通页</a></li>
+          <li>点击下方“开始首次采集”。</li>
+        </ol>
+        <p class="guide-note">当前账号可读取的会话与消息会在本机加密保存。采集时请保留沟通页。</p>
+      </section>
 
       <section class="actions" aria-label="采集操作">
-        <button id="update-incremental" class="primary" type="button" disabled>更新变化会话</button>
-        <button id="update-full" type="button" disabled>重新读取全部会话</button>
-        <button id="stop" type="button" disabled>停止更新</button>
+        <button id="update-incremental" class="primary" type="button" disabled>正在读取本地状态…</button>
+        <button id="update-full" type="button" disabled hidden>重新读取全部会话</button>
+        <button id="stop" type="button" disabled hidden>停止采集</button>
       </section>
 
-      <section class="actions exports" aria-label="导出本地记录账号数据">
+      <section id="export-actions" class="actions exports" aria-label="导出本地记录账号数据" hidden>
         <button id="export-latest" type="button" disabled>导出本次更新给 AI</button>
         <button id="export-all" type="button" disabled>导出全部记录给 AI</button>
         <button id="backup" type="button" disabled>备份当前账号</button>
       </section>
 
-      <footer>
+      <footer id="record-tools" hidden>
         <button id="clear" class="danger" type="button" disabled>清除当前账号本地记录</button>
         <p>新写入的归档在本机加密保存；导出 JSON 为明文，请自行保管。</p>
       </footer>

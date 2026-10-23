@@ -152,6 +152,10 @@ function latestProgress(partition) {
   return values.sort((left, right) => String(right.updatedAt || '').localeCompare(String(left.updatedAt || '')))[0] || null;
 }
 
+function hasCollectionHistory(partition) {
+  return partition?.runtime?.hasCollectionHistory === true || Boolean(latestProgress(partition));
+}
+
 export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
   requestIntervalMs = DEFAULT_SITE_REQUEST_INTERVAL_MS,
   now = () => Date.now(),
@@ -261,6 +265,7 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
       accountUid,
       summary: summary || partition.summary || summarizeState(partition.state),
       progress: popupProgress(progress),
+      hasCollectionHistory: hasCollectionHistory(partition),
       verificationRequired,
       verificationRetrying: false,
       updatedAt: new Date().toISOString(),
@@ -339,6 +344,7 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
           progressState(progress) === 'running' && progress.finalizing !== true) {
         return { rejected: 'COLLECTION_FINALIZING', progress: existing };
       }
+      partition.runtime.hasCollectionHistory = true;
       const normalized = { ...progress, tabId: scope.tabId, accountUid: scope.accountUid,
         collectionToken: scope.collectionToken, updatedAt: new Date().toISOString() };
       partition.runtime.progressByTab[key] = normalized;
@@ -657,7 +663,8 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
       const view = makePopupView(accountUid, partition, tabId, summary, displayProgress);
       return { ok: true, accountUid,
         progress: view.progress, summary, verificationRequired: view.verificationRequired,
-        verificationRetrying: false, updatedAt: view.updatedAt, view };
+        verificationRetrying: false, updatedAt: view.updatedAt,
+        hasCollectionHistory: view.hasCollectionHistory, view };
     }
 
     if (message.type === 'START_UPDATE' || message.type === 'RESUME_AFTER_VERIFICATION') {
@@ -719,6 +726,7 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
           const normalized = { ...progress, tabId, accountUid, collectionToken, updatedAt: new Date().toISOString() };
           if (existing?.collectionToken === collectionToken && terminalProgress(existing) &&
               !terminalProgress(normalized)) return existing;
+          partition.runtime.hasCollectionHistory = true;
           partition.runtime.progressByTab[String(tabId)] = normalized;
           if (normalized.kind === 'api_v1') partition.baseline.previousProgress = normalized;
           appendLog(partition.runtime, 'bulk_started', { tabId, accountUid, mode,
@@ -736,7 +744,7 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
         const view = makePopupView(accountUid, current, tabId, current.summary, startedProgress);
         return { ok: true, accountUid, progress: startedProgress, summary: current.summary,
           verificationRequired: progressRequiresVerification(startedProgress), verificationRetrying: false,
-          updatedAt: new Date().toISOString(), view };
+          updatedAt: new Date().toISOString(), hasCollectionHistory: view.hasCollectionHistory, view };
       } catch (error) {
         if (collectorInvoked) {
           await executePage(tabId, pageStopCollectionBound, [accountUid, collectionToken]).catch(() => null);
@@ -810,12 +818,12 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
       const result = await accounts.clearAccount(accountUid);
       if (validTabId(tabId)) void syncVerificationBadge(tabId, accountUid, null);
       const summary = { contactCount: 0, messageCount: 0, unidentifiedObservationCount: 0 };
-      const view = await writePopupView({ accountUid, summary,
+      const view = await writePopupView({ accountUid, summary, hasCollectionHistory: false,
         progress: null, verificationRequired: false, verificationRetrying: false,
         updatedAt: new Date().toISOString() });
       return { ok: true, accountUid, cleared: true,
         invalidatedTabIds: result.invalidatedTabIds,
-        summary, verificationRequired: false, verificationRetrying: false,
+        summary, hasCollectionHistory: false, verificationRequired: false, verificationRetrying: false,
         updatedAt: view.updatedAt, view };
     }
 
