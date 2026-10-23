@@ -1,0 +1,157 @@
+name: Build and publish Chrome Web Store extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Build a package, check store status, upload a package, or submit it for review.
+        type: choice
+        required: true
+        default: build
+        options:
+          - build
+          - status
+          - upload
+          - publish
+      github_release:
+        description: Also create a GitHub Release with the built ZIP (ignored for status).
+        type: boolean
+        required: false
+        default: false
+
+permissions: {}
+
+jobs:
+  package:
+    if: ${{ inputs.operation == 'build' || inputs.operation == 'upload' || inputs.operation == 'publish' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build public extension bundles
+        run: npm run build
+
+      - name: Run offline tests
+        run: npm test
+
+      - name: Check public source and release contents
+        run: npm run check
+
+      - name: Read extension version
+        id: meta
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./extension-tracker/manifest.json').version")"
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package the allowlisted Chrome extension files
+        run: node scripts/package-extension.mjs --output "$RUNNER_TEMP/boss-chat-recorder.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boss-chat-recorder-${{ steps.meta.outputs.version }}
+          path: ${{ runner.temp }}/boss-chat-recorder.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  chrome-web-store:
+    needs: package
+    if: >-
+      ${{ !cancelled() && (
+        inputs.operation == 'status' ||
+        ((inputs.operation == 'upload' || inputs.operation == 'publish') && needs.package.result == 'success')
+      ) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: chrome-web-store-${{ inputs.operation == 'status' && github.run_id || 'phaihpchfdihnclgjhpmpnhobdcogdhb' }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - uses: google-github-actions/auth@v3
+        id: google-auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.CWS_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Download the package built in this workflow
+        if: ${{ inputs.operation == 'upload' || inputs.operation == 'publish' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: boss-chat-recorder-${{ needs.package.outputs.version }}
+          path: ${{ runner.temp }}
+
+      - name: Check Chrome Web Store item status
+        if: ${{ inputs.operation == 'status' }}
+        env:
+          CWS_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: phaihpchfdihnclgjhpmpnhobdcogdhb
+        run: node scripts/chrome-webstore.mjs status
+
+      - name: Upload package to Chrome Web Store
+        if: ${{ inputs.operation == 'upload' || inputs.operation == 'publish' }}
+        env:
+          CWS_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: phaihpchfdihnclgjhpmpnhobdcogdhb
+        run: node scripts/chrome-webstore.mjs upload --zip "$RUNNER_TEMP/boss-chat-recorder.zip"
+
+      - name: Submit the uploaded item for review
+        if: ${{ inputs.operation == 'publish' }}
+        env:
+          CWS_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: phaihpchfdihnclgjhpmpnhobdcogdhb
+        run: node scripts/chrome-webstore.mjs publish
+
+  github-release:
+    needs:
+      - package
+      - chrome-web-store
+    if: >-
+      ${{ !cancelled() && inputs.github_release && inputs.operation != 'status' &&
+        needs.package.result == 'success' &&
+        (inputs.operation == 'build' || needs.chrome-web-store.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: boss-chat-recorder-${{ needs.package.outputs.version }}
+          path: ${{ runner.temp }}
+
+      - name: Create GitHub Release with the extension ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+        run: >-
+          gh release create "v${RELEASE_VERSION}" "$RUNNER_TEMP/boss-chat-recorder.zip"
+          --target "$GITHUB_SHA"
+          --title "BOSS Chat Recorder v${RELEASE_VERSION}"
+          --notes "Public Chrome extension package built from commit ${GITHUB_SHA}."

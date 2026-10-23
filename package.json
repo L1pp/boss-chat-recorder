@@ -12,6 +12,10 @@
     "build": "node scripts/build-extension.mjs",
     "build:check": "node scripts/build-extension.mjs --check",
     "demo": "node scripts/generate-demo.mjs",
+    "package:extension": "node scripts/package-extension.mjs",
+    "store:status": "node scripts/chrome-webstore.mjs status",
+    "store:upload": "node scripts/chrome-webstore.mjs upload",
+    "store:publish": "node scripts/chrome-webstore.mjs publish",
     "test": "node --test tests/*.test.mjs",
     "check": "npm run build:check && node scripts/check-release.mjs"
   },
