@@ -1,0 +1,38 @@
+name: 问题报告
+description: 报告公开版中可复现的问题
+title: "[问题] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 扩展版本
+      description: 请填写扩展版本；也可注明这是仓库脚本或演示页面的问题。
+      placeholder: "0.8.11"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: 浏览器及版本、操作系统；脚本问题请写 Node.js 版本。
+      placeholder: "Chrome 版本、Windows / macOS / Linux"
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 使用合成数据描述尽量精简的复现步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 预期与实际结果
+      description: 请注明错误码或已脱敏的必要日志片段。
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: >-
+        请勿附上真实聊天、UID、招聘方联系方式、验证码、Cookie、配对令牌、密钥或完整真实导出。安全漏洞请按 SECURITY.md 私下报告，不要公开发布漏洞细节。

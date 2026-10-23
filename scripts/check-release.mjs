@@ -7,9 +7,13 @@ import { generateDemo } from './generate-demo.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const allowedFiles = new Set([
-  '.gitattributes', '.gitignore', 'LICENSE', 'README.md', 'package.json',
+  '.gitattributes', '.gitignore', 'LICENSE', 'README.md', 'package.json', 'package-lock.json',
+  'CONTRIBUTING.md', 'SECURITY.md', 'CHANGELOG.md', 'playwright.config.mjs',
+  'AGENTS.md', '.greptile/config.json', 'docs/AI_REVIEW.md',
+  '.github/PULL_REQUEST_TEMPLATE.md', '.github/ISSUE_TEMPLATE/bug_report.yml',
+  '.github/ISSUE_TEMPLATE/feature_request.yml', '.github/ISSUE_TEMPLATE/config.yml',
   '.github/workflows/ci.yml', '.github/workflows/release.yml',
-  'docs/ARCHITECTURE.md', 'docs/PROVENANCE.md', 'docs/VERIFICATION.md', 'docs/RELEASING.md',
+  'docs/ARCHITECTURE.md', 'docs/PROVENANCE.md', 'docs/VERIFICATION.md', 'docs/RELEASING.md', 'docs/TESTING.md',
   'extension-tracker/LICENSE', 'extension-tracker/PRIVACY.md',
   'extension-tracker/manifest.json', 'extension-tracker/account-store.mjs',
   'extension-tracker/model.mjs', 'extension-tracker/ai-input.mjs',
@@ -25,6 +29,8 @@ export const allowedFiles = new Set([
   'extension-tracker/content/account.bundle.js', 'extension-tracker/content/bulk.bundle.js',
   'scripts/account-reader.mjs', 'scripts/build-extension.mjs', 'scripts/check-release.mjs',
   'scripts/package-extension.mjs', 'scripts/chrome-webstore.mjs',
+  'scripts/test-coverage.mjs',
+  'scripts/browser-tests.mjs', 'tests/browser/extension-harness.mjs', 'tests/browser/public-extension.spec.mjs',
   'scripts/extension-api-bulk.mjs', 'scripts/history-api-reader.mjs', 'scripts/generate-demo.mjs',
   'scripts/site-response.mjs',
   'scripts/generate-store-assets.py',
@@ -82,7 +88,7 @@ async function walk(directory, prefix = '') {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
     // Git metadata is allowed only as metadata; it is never inspected or packaged.
-    if (relative === '.git' || relative === 'dist') continue;
+    if (['.git', 'dist', 'node_modules', 'coverage', 'playwright-report', 'test-results'].includes(relative)) continue;
     const absolute = path.join(directory, entry.name);
     const stat = await lstat(absolute);
     if (stat.isSymbolicLink()) throw new Error(`Symbolic link is not allowed: ${relative}`);
@@ -126,6 +132,7 @@ async function check() {
         : contents;
       for (const [, specifier] of importSource.matchAll(/\b(?:from\s*|import\s*\()\s*['"]([^'"]+)['"]/gu)) {
         if (specifier.startsWith('node:') && !file.startsWith('extension-tracker/')) continue;
+        if (specifier === '@playwright/test' && (file === 'playwright.config.mjs' || file.startsWith('tests/browser/'))) continue;
         if (!specifier.startsWith('.')) throw new Error(`Unexpected external import: ${file}`);
         const imported = path.relative(root, path.resolve(root, path.dirname(file), specifier)).replaceAll(path.sep, '/');
         if (!allowedFiles.has(imported)) throw new Error(`Import outside source allowlist: ${file}`);
