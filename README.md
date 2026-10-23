@@ -1,5 +1,8 @@
 # 求职沟通记录器
 
+[![Automated tests](https://github.com/L1pp/boss-chat-recorder/actions/workflows/ci.yml/badge.svg)](https://github.com/L1pp/boss-chat-recorder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 一个本地优先的 Chrome / Edge 扩展原型：读取用户已登录的 BOSS 沟通页当前可提供的会话与历史，按账号保存，增量更新，再导出供 AI 分析的聊天事实。
 
 0.8.11 的公开候选版为新写入的归档增加本机 AES-GCM 加密，密钥由浏览器自动保存，无密码或解锁步骤；本地存储仅允许可信扩展上下文访问。已在独立 Chromium 中用两个合成账号验收加密落盘、后台停止后唤醒和浏览器完全重启后的读取与导出。原有明文兼容读取，保留的旧数据不自动全库转换；用户导出的 JSON 仍是明文。当前开发入口不自动启用这层适配，避免改动现用调试版数据。
@@ -54,7 +57,7 @@ popup -> service worker -> 当前沟通页中的采集脚本
 
 ## 离线构建与验证
 
-需要 Node.js 24 或更新版本。没有依赖安装步骤，不需要 `npm install`。
+需要 Node.js 24 或更新版本。扩展构建和 Node 离线测试不需要安装依赖。
 
 ```powershell
 npm run build
@@ -64,6 +67,14 @@ npm run check
 ```
 
 `build` 只生成本目录中的扩展 bundle；`build:check` 逐字比较生成结果，不改文件。`demo` 重建合成样例。测试使用模拟接口、模拟 Chrome API 和合成数据，不访问 BOSS、真实浏览器或原项目数据。测试临时文件仅放在系统临时目录并清理。
+
+GitHub 会在推送和 PR 时自动运行 Ubuntu / Windows 离线检查，以及独立 Chromium 的合成浏览器回归。覆盖率和失败诊断以 Actions 产物提供，不设置覆盖率通过门槛。
+
+原生存储与浏览器重启测试使用 Playwright 开发依赖：`npm ci --ignore-scripts`、`npm run test:browser:install`、`npm run test:browser`。这些测试实际加载扩展，使用全新临时 profile 和合成数据，不访问真实网站或个人浏览器配置。完整命令、报告位置和证据边界见 [测试说明](docs/TESTING.md)。
+
+参与开发请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，公开问题请使用仓库模板；安全问题按 [SECURITY.md](SECURITY.md) 私下报告。版本变化见 [CHANGELOG.md](CHANGELOG.md)。
+
+PR 的 Codex / Greptile 自动审阅需所有者完成一次性授权，配置及用量说明见 [AI 审阅说明](docs/AI_REVIEW.md)；不自动合并或发布。
 
 ## 本地加载扩展
 

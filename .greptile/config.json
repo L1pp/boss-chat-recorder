@@ -1,0 +1,8 @@
+{
+  "autoReview": ["open", "push"],
+  "triggerOnDrafts": false,
+  "strictness": 2,
+  "effort": "base",
+  "autoApprove": { "enabled": false },
+  "instructions": "使用中文反馈。优先检查可复现的账号隔离、消息去重与导出、存储提交和加密、权限以及发布流程问题，提供实际触发条件与影响。旧明文归档兼容读取是有意设计，新写入不可明文回退。CI 仅使用合成数据和临时浏览器配置；不要求访问 BOSS、真实账号或增加身份探测。将未来建议与当前缺陷分开，不要求 hash、指纹、冻结或额外审批门禁。不自动批准、合并或发布。"
+}

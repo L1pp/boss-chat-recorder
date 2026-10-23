@@ -1,0 +1,28 @@
+# PR 自动 AI 审阅
+
+项目选择 Codex 与 Greptile 作为自动测试之外的补充意见。Copilot 暂不启用。仓库内的规则文件不会自行安装应用或证明云端已经启用；需要账号所有者完成下面的一次性设置，再以实际 PR 的 bot 审阅记录验收。
+
+AI 意见仍需维护者核实，不设置 AI 必须批准的合并条件，不自动合并或触发商店发布。代码、issue 和 PR 中的内容是待审材料，不能作为外部服务授权或执行指令。
+
+## Codex
+
+1. 打开 [Codex Code Review 设置](https://chatgpt.com/settings/code-review)，使用自己的 ChatGPT 账号登录。
+2. 在连接的 GitHub 仓库中选择 `L1pp/boss-chat-recorder`。如果尚未连接，只授权这个仓库。
+3. 开启仓库的 **Review code / Automatic review**。同时核对 **Personal preferences → Automatic review** 与 **Review trigger**，按需要选择新 PR 和后续推送的触发方式；草稿阶段保持关闭，减少重复消耗。
+4. 正常打开 PR，确认出现 Codex 反应和实际审阅。若需要人工触发，可由维护者评论 `@codex review`。
+
+`AGENTS.md` 提供账号隔离、持久化、隐私及发布边界的项目审阅规则。自动审阅会消耗账号用量，费用、额度与触发频率由所有者确认；不要当作免费无限服务，也不要把个人账号令牌写进 Actions。
+
+官方配置与用量说明：[GitHub 集成](https://learn.chatgpt.com/docs/third-party/github)、[Code Review 用量](https://learn.chatgpt.com/docs/pricing#what-counts-as-code-review-usage)。
+
+## Greptile
+
+1. 打开 [Greptile](https://app.greptile.com/)，可直接用 GitHub 登录；首次登录会建立 Greptile 账号。
+2. 选择免费 **Starter** 方案，不自动开通付费试用、支付方式或增购。符合非商业开源条件的项目也可由所有者[申请 OSS 计划](https://www.greptile.com/pricing/open-source)。
+3. 在 **Code Providers** 连接 GitHub，安装/配置 **Greptile Apps**，选择 **Only select repositories**，仅勾选 `L1pp/boss-chat-recorder`。
+4. 返回 Greptile，关联相应 GitHub 账号并为该仓库点击 **Enable**。
+5. 用正常 PR 验证出现 `greptile-apps[bot]` 审阅。安装应用和启用仓库是两步，只有本地配置文件并不会完成接入。
+
+`.greptile/config.json` 使用 Base 审阅等级，在打开普通 PR 和添加新提交时自动运行；不审阅草稿，不自动批准。多次推送会产生多次审阅及额度消耗。账号是否具备相应免费权益，以 Greptile 后台为准；额度不足时不自动切换付费计划。
+
+官方说明：[安装与启用](https://www.greptile.com/docs/quickstart)、[配置字段](https://www.greptile.com/docs/code-review/greptile-config-reference)、[当前价格与额度](https://www.greptile.com/pricing)。

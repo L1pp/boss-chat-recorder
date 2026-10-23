@@ -1,0 +1,29 @@
+name: 功能建议
+description: 说明一个具体问题和期望行为
+title: "[建议] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 遇到的问题
+      description: 请描述实际场景和当前替代办法。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望行为
+      description: 用具体例子说明你希望如何工作；可使用合成数据。
+    validations:
+      required: true
+  - type: textarea
+    id: considerations
+    attributes:
+      label: 其他背景
+      description: 可补充影响范围或相关限制，不要包含个人或账号数据。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: >-
+        项目由个人维护，建议会按项目范围和维护时间评估，不承诺实现或兼容特定平台。请勿附上真实聊天、UID、联系方式、验证码、Cookie、配对令牌或完整真实导出。
