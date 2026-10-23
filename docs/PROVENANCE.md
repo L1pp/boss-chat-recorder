@@ -17,6 +17,8 @@ The collection baseline is prototype **0.7.2's default API path**: same-origin G
 
 The project's storage, UI, exports, synthetic demo, and tests are also included under MIT. Storage additions include per-conversation versions and account indexes, internal Port commit acknowledgements, and browser-native WebCrypto AES-GCM/IndexedDB key storage. They add no third-party runtime dependency.
 
+The extension icon design used built-in image-generation assistance. Its transparent artwork master is preserved in [`assets/icon.png`](assets/icon.png), and the four runtime sizes are resized from it.
+
 ## Excluded material
 
 Other collection implementations and generated resources from the original project are not build or runtime dependencies. The public copy excludes the development-only diagnostic bridge, personal browser data, real exports, real account UIDs, and diagnostic logs. It does not copy BOSS site scripts, page captures, API responses, or real account parameters. Demo records are hand-authored and explicitly synthetic.
