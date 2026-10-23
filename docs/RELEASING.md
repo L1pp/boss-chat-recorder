@@ -15,7 +15,7 @@ Open **Actions → Build and publish Chrome Web Store extension → Run workflow
 | `upload` | Upload the selected ZIP as a draft, waiting for Google's acknowledgement; no review submission |
 | `publish` | Upload the selected ZIP and submit for normal review; approval publishes under the item's existing visibility |
 
-`build_run_id` is optional. Leave it blank to build and test once in this run. Set it to the original successful `main` release-workflow run ID to download its retained `boss-chat-recorder-<version>` artifact instead. Reuse skips the package job, dependency installation, and tests; it does not regenerate or modify the ZIP. PR CI artifacts, failed runs, and expired artifacts are not release sources. `status` ignores this input.
+`build_run_id` is optional. Leave it blank to build and test once in this run. Set it to the original successful `main` release-workflow run ID to download its retained `boss-chat-recorder-<version>` artifact instead. Reuse skips the package job, dependency installation, and tests; it does not regenerate or modify the ZIP. PR CI artifacts, failed runs, and expired artifacts are not release sources. `status` ignores this input. A reused `build` is a source-selection preview: it creates no new Actions artifact. Its run summary links to the original ZIP; upload or GitHub Release jobs download that same original artifact when selected.
 
 For a staged release:
 

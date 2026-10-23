@@ -250,6 +250,27 @@ test('CLI reuse does not read the current manifest and preserves the original ru
   assert.ok(!lines.join('\n').includes(token));
 });
 
+test('build with reuse explains the source-selection preview and links the original artifact run', async () => {
+  const { fetchImpl } = metadata();
+  const writes = [];
+  await runCli({
+    env: {
+      RELEASE_OPERATION: 'build', BUILD_RUN_ID: '1234', GITHUB_REPOSITORY: repository,
+      GITHUB_REF: 'refs/heads/preview', GH_TOKEN: token, GITHUB_STEP_SUMMARY: 'synthetic-summary',
+    },
+    fetchImpl,
+    appendFileImpl: async (...args) => writes.push(args),
+    stdout: () => {},
+  });
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0], 'synthetic-summary');
+  assert.match(writes[0][1], /creates no new build artifact/u);
+  assert.ok(writes[0][1].includes(`https://github.com/${repository}/actions/runs/1234`));
+  assert.ok(writes[0][1].includes(originalArtifact.name));
+  assert.ok(writes[0][1].includes(builtSha));
+  assert.ok(!writes[0][1].includes(token));
+});
+
 const workflow = await readFile(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
 
 function jobBlock(name) {

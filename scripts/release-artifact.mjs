@@ -175,6 +175,17 @@ export async function runCli({
       '',
     ].join('\n'), 'utf8');
   }
+  if (operation === 'build' && !plan.needsBuild && env.GITHUB_STEP_SUMMARY) {
+    await appendFileImpl(env.GITHUB_STEP_SUMMARY, [
+      '## Selected existing tested package',
+      '',
+      'The build stage creates no new build artifact; it selects an existing tested ZIP.',
+      `Download the original ZIP from [build run ${plan.runId}](https://github.com/${env.GITHUB_REPOSITORY}/actions/runs/${plan.runId}).`,
+      `Selected artifact: ${plan.artifactName}; source commit: ${plan.sourceSha}.`,
+      'If GitHub Release creation is enabled on main, its job uses this same original ZIP.',
+      '',
+    ].join('\n'), 'utf8');
+  }
   stdout(redact(JSON.stringify(plan), env.GH_TOKEN));
   return plan;
 }

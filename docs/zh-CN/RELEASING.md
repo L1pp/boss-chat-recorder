@@ -15,7 +15,7 @@
 | `upload` | 上传所选 ZIP 为草稿，等待 Google 确认，不提交审核 |
 | `publish` | 上传所选 ZIP 并提交正常审核，通过后按条目现有可见性发布 |
 
-`build_run_id` 可留空，表示本轮构建和测试一次；填入原始成功 `main` 发布构建的 run ID，则下载该轮保留的 `boss-chat-recorder-<version>` 产物，跳过打包 job、依赖安装和测试，直接使用原 ZIP，不重新生成或修改它。PR CI 预览、失败轮次和已过期产物不能作为正式发布来源。`status` 忽略此输入。
+`build_run_id` 可留空，表示本轮构建和测试一次；填入原始成功 `main` 发布构建的 run ID，则下载该轮保留的 `boss-chat-recorder-<version>` 产物，跳过打包 job、依赖安装和测试，直接使用原 ZIP，不重新生成或修改它。PR CI 预览、失败轮次和已过期产物不能作为正式发布来源。`status` 忽略此输入。复用模式的 `build` 是来源选择预览，不新建 Actions 产物；该轮摘要会给出原始 ZIP 所在轮次的链接。需要上传或创建 GitHub Release 时，对应 job 才下载同一原始产物。
 
 分阶段发布时：
 

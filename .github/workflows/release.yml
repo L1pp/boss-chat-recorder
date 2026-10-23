@@ -14,7 +14,7 @@ on:
           - upload
           - publish
       build_run_id:
-        description: Reuse the ZIP from a successful main release run; leave empty to build and test once.
+        description: Reuse a successful main ZIP (build only selects it); empty builds and tests once.
         type: string
         required: false
         default: ''

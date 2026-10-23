@@ -37,3 +37,18 @@ test('CI and release images match the locked Playwright package', async () => {
     assert.equal(images[0][1], version, `${name} uses the installed Playwright version`);
   }
 });
+
+
+test('PR CI keeps main-only pushes, unrestricted PRs, and preinstalled browser execution', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const events = workflow.slice(workflow.indexOf('on:'), workflow.indexOf('permissions:'));
+  assert.match(events, /push:\s*\n\s+branches: \[main\]/u);
+  assert.ok(events.trimEnd().endsWith('pull_request:'), 'PR triggering has no branch/path restriction');
+  const browser = workflow.slice(workflow.indexOf('  browser:'));
+  assert.match(browser, /name: Chromium synthetic regression/u);
+  assert.match(browser, /PLAYWRIGHT_BROWSERS_PATH: \/ms-playwright/u);
+  assert.ok(browser.includes('run: npm ci --ignore-scripts'));
+  assert.ok(browser.includes('run: npm run test:browser'));
+  assert.ok(!browser.includes('test:browser:install'));
+  assert.ok(!browser.includes('apt-get'));
+});
