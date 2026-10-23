@@ -19,6 +19,7 @@ ICON_DIR = ROOT / "extension-tracker" / "icons"
 
 MASTER_SIZE = (1254, 1254)
 ICON_SIZES = (16, 32, 48, 128)
+RESAMPLING = getattr(Image, "Resampling", Image)
 
 
 def verify_png(path: Path, expected: tuple[int, int]) -> str:
@@ -50,7 +51,7 @@ def main() -> int:
     ICON_DIR.mkdir(parents=True, exist_ok=True)
     for size in ICON_SIZES:
         target = ICON_DIR / f"icon-{size}.png"
-        master.resize((size, size), Image.Resampling.LANCZOS).save(
+        master.resize((size, size), RESAMPLING.LANCZOS).save(
             target, format="PNG", optimize=True
         )
 
