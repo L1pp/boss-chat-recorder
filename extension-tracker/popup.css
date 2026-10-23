@@ -51,6 +51,11 @@ button:hover:not(:disabled) { border-color: #9ea3af; background: #fbfbfc; }
 button:disabled { color: #a4a7ae; cursor: not-allowed; }
 .icon-button { width: 36px; padding: 0; font-size: 22px; line-height: 1; }
 
+.language-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: -3px 0 12px; }
+.language-control label { color: #666a74; font-size: 11px; }
+.language-control select { border: 1px solid #d9dce2; border-radius: 6px; padding: 4px 7px; color: #30323a; background: #fff; font: inherit; font-size: 11px; }
+.language-status { margin-top: -5px; }
+
 .account-card, .progress-card, .counts {
   border: 1px solid #e2e4e9;
   border-radius: 10px;

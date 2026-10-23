@@ -1,58 +1,60 @@
-# 隐私表填写说明
+# Privacy-form guidance
 
-本文件供开发者填写 Chrome Web Store 后台时使用，适用于 0.8.11 公开候选版。它不替代 [隐私政策正文](../extension-tracker/PRIVACY.md)，也不表示表单已经提交。
+[English](privacy-disclosure.md) | [简体中文](privacy-disclosure_CN.md)
 
-## 单一用途
+This developer guidance records the 0.8.11 public-package disclosure baseline for the Chrome Web Store dashboard. It does not replace the [privacy policy](../extension-tracker/PRIVACY.md) or establish that a form was submitted. Localization work does not change the policy path or add a data-upload service.
 
-在用户手动启动后，将其已登录 BOSS 沟通页当前可提供的聊天记录按账号保存到本机，并提供本地增量更新、导出和删除。
+## Single purpose
 
-## 权限理由
+After a user manually starts it, save chats currently available on their signed-in BOSS chat page to per-account local archives, with incremental updates, export, and deletion.
 
-| 权限 | 可填写的理由 |
+## Permission reasons
+
+| Permission | Suggested explanation |
 | --- | --- |
-| `activeTab` | 用户点击扩展后，临时访问当前沟通标签页，为用户主动启动的记录保存提供页面上下文；不申请持续访问所有网站。 |
-| `scripting` | 在该标签页注入扩展包内的只读采集脚本，使用页面已有登录会话读取当前账号、会话列表及历史；不自动操作输入框、发送消息或投递。 |
-| `storage` | 在当前浏览器配置中保存账号分区、聊天归档、增量基线、进度和不含聊天正文的轻量界面缓存，支持关闭弹窗后保存及再次打开读取。 |
-| `unlimitedStorage` | 长期聊天历史、消息元数据与保留的记录版本可能超过 `storage.local` 默认配额，需要在本机保存完整的已获取归档；此权限不用于远程上传或扩大网站访问范围。 |
+| `activeTab` | Temporarily accesses the current chat tab after the user clicks the extension, providing page context for user-initiated archiving without persistent access to all websites. |
+| `scripting` | Injects bundled read-only collection scripts into that tab, using the existing page session to read the account, conversation list, and history. Does not operate a composer, send messages, or submit applications. |
+| `storage` | Stores per-account archives, incremental baselines, progress, and lightweight UI cache without chat bodies in the current browser profile, supporting persistence after the popup closes and later reads. |
+| `unlimitedStorage` | Retained history, metadata, and record versions may exceed the default `storage.local` quota. This supports complete local retention of acquired records, not remote upload or broader website access. |
 
-公开运行包不声明 `host_permissions` 或 `optional_host_permissions`，不包含 localhost 调试桥，不请求 `tabs`、`cookies`、`downloads` 或系统通知权限。文件下载由扩展页面内的用户操作完成。
+The public package declares neither `host_permissions` nor `optional_host_permissions`; it has no localhost debug bridge and does not request `tabs`, `cookies`, `downloads`, or system-notification permission. Downloads follow a user action in an extension page.
 
-远程代码项：**否**。可执行脚本与模块随扩展包提供；网站接口返回的聊天数据作为数据处理，不下载或执行远程脚本。
+Remote code: **No**. Executable scripts and modules are bundled. Chat API responses are treated as data, without downloading or executing remote scripts.
 
-## 数据类型与用途
+## Data types and purposes
 
-不要因数据只留在本机就填写“完全不处理用户数据”。官方要求本机处理也披露，后台勾选内容应与实际功能及公开隐私政策一致。[本机数据披露说明](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
+Local-only handling is still data processing that needs accurate disclosure; do not claim the extension processes no user data merely because it stays on the device. Match dashboard selections to actual behavior and the public policy. See [local-data disclosure guidance](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
-| 后台数据类别 | 本扩展的对应内容 | 用途 |
+| Dashboard category | Corresponding content | Purpose |
 | --- | --- | --- |
-| 个人身份信息 | BOSS 账号 UID、沟通对象标识及接口返回的联系人资料；聊天自身也可能包含姓名、电话等 | 区分本地账号与会话，形成用户主动保存的沟通归档 |
-| 个人通信 | 聊天正文、方向、时间、图片或附件的接口摘要 | 本地查看计数、保存、增量去重与用户主动导出 |
-| 网站内容 | 当前沟通页对应的会话、消息及历史覆盖信息 | 保存用户可访问的沟通记录并说明可获取范围 |
+| Personally identifiable information | Account UID, conversation-party identifiers, and contact fields returned by BOSS; chats may contain names or phone numbers | Separate accounts and conversations in the user-initiated archive |
+| Personal communications | Message bodies, direction, time, and API-provided image/attachment summaries | Local counts, saving, incremental deduplication, and user-initiated export |
+| Website content | Conversations, messages, and available-history coverage for the chat page | Retain accessible communications and explain their available scope |
 
-扩展没有支付、健康资料或广告跟踪功能，也不读取浏览历史清单，不要求密码和验证码，不读取或导出浏览器 Cookie。用户聊天中自行写入的信息可能属于其他敏感内容；这些内容随用户选择保存的聊天原样处理，不用于分类画像、广告或独立分析。后台若调整数据类别名称，应根据具体定义映射，不以本表名称代替实际后台定义。
+There is no payment, health-profile, or advertising-tracking feature. The extension does not read a browser-history inventory, ask for passwords/codes, or read/export browser Cookies. Messages may themselves contain other sensitive information; that content is retained as part of the selected chats without profiling, advertising, or separate analysis. If dashboard category names change, use their actual definitions rather than treating this table as the dashboard's authoritative taxonomy.
 
-## 可填写的数据处理说明
+## Data handling statement
 
-数据仅用于扩展明示的本地沟通记录保存、增量更新、导出和删除。开发者没有聊天数据接收端，不运行聊天上传、遥测、广告或分析服务，不出售用户数据，不将其用于广告、信用评估、借贷或与核心功能无关的用途。开发者不会通过扩展读取用户聊天。用户主动导出后自行向第三方提供文件的行为，由其自行选择；扩展不自动分享这些文件。
+Data is used only for the disclosed local archive, incremental update, export, and deletion features. The developer has no chat-data receiving endpoint and operates no chat-upload, telemetry, advertising, or analytics service. User data is not sold or used for advertising, credit assessment, lending, or unrelated purposes, and the developer does not read chats through the extension. Sharing a manually exported file with a third party is the user's choice; the extension does not automatically share it.
 
-0.8.11 公开入口对新写入的账号归档、运行态和会话记录使用 AES-256-GCM。密钥以不可导出的 CryptoKey 保存在同一浏览器配置的 IndexedDB，保存和读取均在本机进行。它不提供跨设备同步、云端恢复或密码解锁。失去密钥后不能解密对应归档。
+Since 0.8.11, the public entry encrypts new account-archive, runtime, and conversation-record values with AES-256-GCM. A non-extractable CryptoKey is stored in the same browser profile's IndexedDB. Saves and reads are local. There is no cross-device sync, cloud recovery, or password unlock. Losing the key prevents decryption of the corresponding archive.
 
-账号 UID 可能出现在存储键名及轻量界面缓存中；计数与部分进度摘要、主动导出的 JSON 和备份为明文。旧明文可兼容读取，本版不扫描重写保留的旧根及旧记录版本，因此不宣称所有历史副本都已加密。
+UIDs may appear in storage key names and lightweight UI caches. Counts, some progress summaries, and user-exported JSON/backups remain plaintext. Old plaintext can still be read; retained old roots and record versions are not scanned and rewritten, so this does not claim that every historical copy is encrypted.
 
-本地归档保留至用户清除对应账号记录、卸载扩展或清理浏览器数据等导致存储移除。用户可主动导出，再选择“清除当前账号本地记录”；这不会删除网站聊天或已下载文件。重新安装或丢失浏览器配置可能同时丢失归档和密钥，需在清理前自行导出。
+Local records remain until per-account clearing, extension removal, browser-data deletion, or another storage-removal event. Users may export first and then clear the selected account's local records. Clearing does not delete website chats or downloaded files. Reinstallation or losing a profile may lose both records and key; export before cleanup when needed.
 
-异常诊断只在本机保留接口路径、状态、响应类型、阶段及计数等必要信息，不保存 HTML 正文、URL 查询参数或 Cookie。公开包不包含开发调试桥。
+Local diagnostics retain necessary path, status, response type, stage, and count information without HTML bodies, URL query parameters, or Cookies. The public package excludes the development debug bridge.
 
-## 有限用途声明草稿
+## Limited Use statement
 
-本扩展对用户数据的使用限于商品页和界面明示的本地沟通记录归档、增量更新、导出和删除，并遵循 Chrome Web Store User Data Policy 的 Limited Use 要求。用户数据不用于广告，不出售，不交给与核心功能无关的第三方，也不提供给开发者人员阅读。扩展不向开发者服务器或 AI 服务传输聊天记录。
+Use of user data is limited to the local archive, incremental update, export, and deletion described in the listing and UI, following the Chrome Web Store User Data Policy's Limited Use requirements. Data is not sold, used for advertising, passed to unrelated third parties, or made available for developer personnel to read. The extension does not transmit chats to a developer server or AI service.
 
-该声明已纳入 [隐私政策正文](../extension-tracker/PRIVACY.md)。填写后台时仍需确认认证项与当前代码行为一致。[有限用途披露说明](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
+The statement is included in the [privacy policy](../extension-tracker/PRIVACY.md). The developer must still verify that actual dashboard certifications match code behavior. See [Limited Use guidance](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
-## 提交前待填
+## Before a future submission
 
-- 隐私政策 URL 填写 `https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md`；提交前核对为本版本内容并可免登录访问。
-- 在开发者后台核对数据类型、单一用途和四项权限理由，再由开发者确认实际认证项；本文件不代替开发者认证。
-- 填写真实支持邮箱与后台要求的开发者资料。
+- Use `https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md` for the privacy-policy URL, confirming public accessibility and accurate submitted-version content.
+- Check data categories, single purpose, and all four permission reasons, then have the developer confirm the actual certifications. This document does not certify on their behalf.
+- Confirm the support email and account information required by the dashboard.
 
-后台需要填写单一用途、权限理由、远程代码及用户数据说明，隐私页面与软件行为应一致。[隐私表说明](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) 处理用户数据的扩展须提供准确、可访问的隐私政策链接。[隐私政策要求](https://developer.chrome.com/docs/webstore/program-policies/privacy)
+See the official [privacy-form guidance](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) and [privacy-policy requirements](https://developer.chrome.com/docs/webstore/program-policies/privacy). Local handling, the interface, and published disclosures should remain consistent.

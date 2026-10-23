@@ -1,31 +1,33 @@
-# 测试与证据范围
+# Testing and evidence boundaries
 
-测试分为两层：Node 离线回归验证数据与控制逻辑；独立 Chromium 验证原生扩展 API、加密存储和浏览器生命周期。两层都使用合成数据，不登录 BOSS，不读取维护者的浏览器配置或聊天数据，不连接商店。
+[English](TESTING.md) | [简体中文](TESTING_CN.md)
 
-## Node 离线回归
+Tests have two layers: Node offline regression for data and control logic, and isolated Chromium for native extension APIs, encrypted storage, and browser lifecycle. Both use synthetic data. They do not log in to BOSS, read a personal browser profile or real chats, or connect to the store.
 
-Node.js 24 或更新版本即可运行，无需安装第三方依赖：
+## Node offline regression
+
+Use Node.js 24 or later. No third-party dependency installation is required for this layer:
 
 ```sh
 npm test
 npm run check
 ```
 
-现有测试覆盖会话增量选择、消息去重、分页与异常暂停、账号分区、迟到消息拒绝、导出范围、存储提交与恢复、弹窗状态，以及发布客户端的合成 HTTP 响应。测试使用替代的 Chrome API、DOM、IndexedDB 或 fetch；这些结果不能替代真实浏览器 API 和真实平台验收。
+Tests cover conversation selection, message deduplication, pagination and pauses, account partitions, rejection of late writes, export scope, commit and recovery behavior, popup state, and synthetic HTTP responses for the release client. They use replacement Chrome APIs, DOM, IndexedDB, or fetch implementations. They do not replace native-browser or live-platform acceptance.
 
-`check` 验证已提交 bundle 与源码生成结果一致、公开文件范围、许可证和版本、合成示例及有限的敏感模式。它不连接外部网站，也不能证明所有个人信息都已被识别。`node_modules/`、测试报告、覆盖率和 `dist/` 是忽略的生成目录；扩展 ZIP 仍只从明确列出的公开运行文件生成。
+`check` checks committed bundles against generated source, public file scope, licenses and versions, synthetic examples, and a limited set of sensitive patterns. It does not connect to external sites and cannot establish that every type of personal information has been detected. `node_modules/`, reports, coverage, and `dist/` are ignored generated directories. Extension ZIPs use an explicit list of public runtime files.
 
-## 覆盖率
+## Coverage
 
 ```sh
 npm run test:coverage
 ```
 
-使用 Node 原生 V8 覆盖率，输出终端摘要和 `coverage/lcov.info`。报告针对本次 Node 测试实际执行到的 `extension-tracker/` 和 `scripts/` 文件；没有加载的文件不一定进入报告，通过 VM / data URL 执行的代码也可能不能映射回源文件。Chromium 测试不计入这份覆盖率。它用于定位未覆盖逻辑，不是全项目正确率或平台兼容率，没有百分比通过门槛。
+Node's native V8 coverage produces a console summary and `coverage/lcov.info`. It describes `extension-tracker/` and `scripts/` files actually executed by that Node run. Unloaded files may not appear, and code executed through a VM or data URL may not map back to source files. Chromium tests are not part of this report. Use it to find untested logic, not as a project correctness percentage or platform compatibility rate. No percentage threshold gates a pass.
 
-## Chromium 合成回归
+## Chromium synthetic regression
 
-首次安装测试工具与 Chromium：
+Install the test tools and Chromium once:
 
 ```sh
 npm ci --ignore-scripts
@@ -34,36 +36,36 @@ npm run build
 npm run test:browser
 ```
 
-Linux 若缺少浏览器系统库，运行 `npm run test:browser:install -- --with-deps`。安装和测试包装器统一使用本项目 `node_modules/.cache/boss-browser/`，不清理共享 Playwright 缓存；Chromium 配置另建于系统临时目录。Playwright 仅为开发依赖，不进入商店扩展 ZIP。
+On Linux, missing browser system libraries can be installed with `npm run test:browser:install -- --with-deps`. The install/test wrappers share this project's `node_modules/.cache/boss-browser/`; they do not clear a shared Playwright cache. Browser profiles are new directories in the system temporary directory. Playwright is a development dependency and is absent from the store ZIP.
 
-测试按公开包清单实际加载扩展，用仓库中的两个合成账号和生产存储模块播种数据，验证：
+Tests load the extension using the public package list and seed two repository synthetic accounts through production storage modules. They verify:
 
-- 真实 `chrome.storage.local` 的受保护归档为密文，原生 IndexedDB 的 AES-GCM CryptoKey 不可导出，popup 能显示本地缓存。
-- 使用空记录和已有记录的合成本地缓存，验证首次引导、主按钮与操作区域的实际浏览器显示，并保存合成界面截图。
-- 两个合成账号复用招聘者与消息 ID 时，导出和清除仍按账号隔离。
-- 真正停止并唤醒扩展 worker、完全关闭 Chromium 后以同一临时 profile 重启，无需重新播种即可读取和导出。
+- Protected archive values in native `chrome.storage.local` are ciphertext; the native IndexedDB AES-GCM CryptoKey is non-extractable; the popup displays local cache data.
+- The actual browser display of first-collection guidance, primary actions, and archive controls with empty and existing synthetic caches, including synthetic screenshots.
+- Exports and clearing remain account-specific when two synthetic accounts reuse recruiter and message IDs.
+- A real worker stop and wake, followed by completely closing Chromium and reopening the same temporary profile, preserves readable/exportable records without reseeding.
 
-导出与清除通过真实扩展页调用生产存储和导出模块；缓存显示使用 `popup.html` 页面。当前 headless 环境没有提供可自动化的 action popup 视图，因此尚未验证工具栏弹窗到后台的成功消息往返；该消息处理逻辑仍由 Node 测试覆盖。
+Export and clearing calls come from a real extension page using production modules; cache display uses `popup.html`. The current headless harness does not expose an automatable toolbar action-popup view, so a successful action-popup-to-worker message round trip is not covered by this current automated browser suite. Node tests cover those message handlers. Earlier one-off native acceptance is recorded separately in [verification](VERIFICATION.md).
 
-浏览器测试阻断外部网络，不启动采集。每次结束只清理本次创建并核对路径的临时目录，不使用个人 Chrome/Edge profile。
+Browser tests block external network access and do not start collection. Cleanup removes only temporary directories created by that run after checking their paths; no personal Chrome or Edge profile is used.
 
-失败时保留合成页面截图和 trace；HTML 报告位于 `playwright-report/`，附件位于 `test-results/`。可用 `npx playwright show-report` 查看。测试不自动重试，不做截图逐像素比较或固定秒数性能阈值。
+On failure, synthetic screenshots and traces are retained. The HTML report is in `playwright-report/` and attachments in `test-results/`; use `npx playwright show-report` to open it. Tests do not automatically retry, compare screenshots pixel by pixel, or impose a fixed-second performance threshold.
 
 ## GitHub Actions
 
-推送和 PR 自动运行：
+Pushes and PRs run:
 
-- Ubuntu 与 Windows 上的 Node 24 离线测试、覆盖率、公开源码检查及 ZIP 打包。
-- Ubuntu 上实际加载扩展的 Chromium 合成回归。
-- 覆盖率和浏览器诊断报告保留 7 天，公开运行 ZIP 保留 14 天。CI 不需要 Google 身份、发布令牌或真实网站账号。
+- Node 24 offline tests, coverage, public-source checks, and ZIP packaging on Ubuntu and Windows.
+- Chromium synthetic regression with the extension actually loaded on Ubuntu.
+- Coverage and browser diagnostics retained for 7 days, and public runtime ZIP artifacts retained for 14 days. CI needs no Google identity, release token, or real website account.
 
-手动发布工作流的构建阶段同样运行浏览器回归；上传或提交只在明确选择相应操作且测试成功后执行。`status` 仍只查询商店，不运行浏览器测试、上传或提交。见 [发布说明](RELEASING.md)。
+The manual release workflow's build stage also runs browser regression. Upload and review submission run only when the respective operation is explicitly selected and tests pass. `status` only queries the store; it does not run browser tests, upload, or submit. See [releasing](RELEASING.md).
 
-## 仍需人工验证的边界
+## Remaining manual boundaries
 
-- Chromium 合成账号隔离不能证明双真实账号切换已经验收。
-- 离线分页与增量测试不能证明 BOSS 当前接口、账号状态或风控兼容性。
-- 当前 Chromium 通过，不代表 Chrome 最低支持版本、Edge 或所有操作系统组合都已通过。
-- 自动测试通过不代表网站已删除的历史能够恢复，不代表平台认可采集速率，也不代表发布已获商店审核批准。
+- Synthetic Chromium isolation does not establish successful switching between two real accounts.
+- Offline pagination and incremental tests do not establish current BOSS API, login, or platform-restriction compatibility.
+- Passing on the current Chromium does not establish support across every operating system, Edge, or the minimum Chrome version.
+- Passing tests do not recover deleted website history, establish a platform-approved collection rate, or constitute store approval.
 
-实现指南：[Node 测试覆盖率](https://nodejs.org/docs/latest-v24.x/api/test.html#collecting-code-coverage)、[Playwright 扩展测试](https://playwright.dev/docs/chrome-extensions)。测试分层和本地合成 fixture 的组织方式也参考了 [Parallel AI 的测试工作流](https://github.com/ParkerCai/parallel-ai-extension/blob/main/.github/workflows/test.yml)。
+References: [Node test coverage](https://nodejs.org/docs/latest-v24.x/api/test.html#collecting-code-coverage) and [Playwright extension testing](https://playwright.dev/docs/chrome-extensions). The separation of test layers and local fixtures also drew on [Parallel AI's test workflow](https://github.com/ParkerCai/parallel-ai-extension/blob/main/.github/workflows/test.yml).

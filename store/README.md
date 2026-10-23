@@ -1,38 +1,42 @@
-# Chrome Web Store 提交材料
+# Chrome Web Store materials
 
-适用对象：**BOSS 沟通记录本地助手 0.8.11 公开候选版**。本目录用于检查和填写商店草稿；公开源码及隐私政策发布到 GitHub，商店草稿先不提交审核。
+[English](README.md) | [简体中文](README_CN.md)
 
-## 材料位置
+These materials were prepared for **BOSS 沟通记录本地助手 0.8.11**. They retain the store-artwork and disclosure baseline. Source 0.8.12 is an unreleased candidate; bilingual documentation does not upload a new package, change a listing, or submit a review. The last published version documented by the repository is 0.8.11, without a fresh store-status check implied by this file.
 
-| 材料 | 文件 | 用途 |
+Developer-facing instructions default to English. The [Chinese listing draft](listing-zh-CN.md) remains Chinese for the product's primary market, and linked Chinese versions of this guidance are retained. The public [privacy-policy path](../extension-tracker/PRIVACY.md) is unchanged.
+
+## Materials
+
+| Material | File | Purpose |
 | --- | --- | --- |
-| 中文商品页 | [listing-zh-CN.md](listing-zh-CN.md) | 名称、简介、详细介绍和截图说明 |
-| 隐私表填写说明 | [privacy-disclosure.md](privacy-disclosure.md) | 单一用途、权限理由、数据类型和有限用途说明 |
-| 审核备注 | [reviewer-instructions.md](reviewer-instructions.md) | 安装、操作流程、合成演示与真实平台测试边界 |
-| 隐私政策正文 | [extension-tracker/PRIVACY.md](../extension-tracker/PRIVACY.md) | 与 0.8.11 一致的公开隐私政策 |
-| 本机加密验收 | [acceptance-0.8.11.json](acceptance-0.8.11.json) | 合成数据的原生浏览器验收结果，以文件记录为准 |
-| 图标 | `extension-tracker/icons/icon-16.png`、`icon-32.png`、`icon-48.png`、`icon-128.png` | 扩展包内图标；相对本目录位于 `../extension-tracker/icons/` |
-| 小型宣传图 | `assets/small-promo.png` | 440 × 280 PNG |
-| 截图 | `assets/screenshot-overview.png`、`assets/screenshot-no-changes.png` | 1280 × 800 PNG，真实扩展界面中的合成数据 |
+| Chinese listing | [listing-zh-CN.md](listing-zh-CN.md) | Name, summary, description, and screenshot captions |
+| Privacy form guidance | [privacy-disclosure.md](privacy-disclosure.md) / [中文](privacy-disclosure_CN.md) | Single purpose, permission reasons, data types, and Limited Use disclosure |
+| Reviewer notes | [reviewer-instructions.md](reviewer-instructions.md) / [中文](reviewer-instructions_CN.md) | Installation, operation, synthetic demonstration, and live-platform limits |
+| Privacy policy | [extension-tracker/PRIVACY.md](../extension-tracker/PRIVACY.md) | Public policy supplied with the 0.8.11 baseline |
+| Native encryption acceptance | [acceptance-0.8.11.json](acceptance-0.8.11.json) | Actual synthetic native-browser results; use the recorded scope |
+| Icons | `../extension-tracker/icons/icon-16.png`, `icon-32.png`, `icon-48.png`, `icon-128.png` | Icons included in the runtime package |
+| Small promotional image | `assets/small-promo.png` | 440 × 280 PNG |
+| Screenshots | `assets/screenshot-overview.png`, `assets/screenshot-no-changes.png` | 1280 × 800 PNG showing synthetic records in the actual extension |
 
-源码压缩包供阅读和离线复现；商店运行包只包含扩展运行文件，`manifest.json` 必须位于 ZIP 根目录。[软件包要求](https://developer.chrome.com/docs/webstore/prepare)
+A source archive supports inspection and offline reproduction. The store ZIP contains only runtime files and must put `manifest.json` at its root. See [package requirements](https://developer.chrome.com/docs/webstore/prepare).
 
-商店当前要求扩展图标、小型宣传图和至少一张截图。本目录使用 128 × 128 PNG 图标、440 × 280 宣传图和 1280 × 800 截图；大幅宣传图和视频本轮不准备。[图片要求](https://developer.chrome.com/docs/webstore/images)
+The prepared artwork consists of a 128 × 128 icon, a 440 × 280 promotional image, and 1280 × 800 screenshots. A large promotional image and video are not included. Check the dashboard and [image requirements](https://developer.chrome.com/docs/webstore/images) before a future submission; this file is not a live dashboard inventory.
 
-## 开发者后续填写
+## Account-owner responsibilities
 
-以下内容依赖开发者账号及发布决定，材料中不代填身份信息，也不索取密码、验证码或浏览器 Cookie。
+Account-specific and publication choices belong to the developer. These materials do not request passwords, verification codes, or browser Cookies.
 
-- 支持邮箱和商店公开联系方式。
-- 开发者名称、所在国家或地区、身份验证及后台要求的交易者状态。
-- 发行地区、可见性、定价设置与最终商店分类；分类建议选生产效率相关类别，以后台选项为准。
-- 商店隐私政策字段填写 [公开隐私政策 URL](https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md)，提交前核对页面为 0.8.11 内容并可免登录访问。
-- 审核后台如要求额外测试说明，由开发者补充适当测试安排；不要提供日常使用账号的密码或真实聊天导出。
+- Confirm the support email and public store contact details.
+- Confirm the developer name, country or region, identity checks, and any dashboard-required trader declaration.
+- Choose distribution regions, visibility, pricing, and category. Productivity is the suggested category, subject to available dashboard choices.
+- Keep the store policy field pointed to the [public privacy policy](https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md), and check that it is accessible without login and matches the submitted behavior.
+- If reviewers need more testing information, arrange appropriate conditions without supplying everyday account passwords or real chat exports.
 
-项目主页为 [GitHub 仓库](https://github.com/L1pp/boss-chat-recorder)，支持页面可使用 [GitHub Issues](https://github.com/L1pp/boss-chat-recorder/issues)。隐私政策为 [公开政策页面](https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md)，与本目录中的政策正文同源。
+Project home: [GitHub repository](https://github.com/L1pp/boss-chat-recorder). Support: [GitHub Issues](https://github.com/L1pp/boss-chat-recorder/issues). Public policy: [PRIVACY.md](https://github.com/L1pp/boss-chat-recorder/blob/main/extension-tracker/PRIVACY.md), from the same source as the local policy.
 
-## 本轮范围
+## Evidence boundaries
 
-加密和重启持久化使用隔离浏览器配置、合成账号与合成消息验收，不读取现用浏览器真实记录。图片不含真实求职数据；独立演示页面不冒充已安装扩展功能。
+Encryption and restart persistence were accepted with isolated browser profiles, synthetic accounts, and synthetic messages. Artwork contains no real job-search records. The standalone demo does not impersonate additional installed-extension functionality.
 
-这份材料不表示商店已经批准，也不表示网站限制已消除。真实平台采集范围沿用已有验证记录；本轮不使用真实账号重测，多真实账号切换继续暂缓。
+These materials alone establish neither store approval nor the removal of website restrictions. Real-platform collection remains limited to the recorded acceptance scope. No new real-account test is implied by localization, and two-real-account switching remains deferred. Use the [release workflow](../docs/RELEASING.md) for later authorized packaging and store operations.

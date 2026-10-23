@@ -1,38 +1,38 @@
-name: 问题报告
-description: 报告公开版中可复现的问题
-title: "[问题] "
+name: Bug report / 问题报告
+description: Report a reproducible public-version issue. 可使用中文填写。
+title: "[Bug] "
 body:
   - type: input
     id: version
     attributes:
-      label: 扩展版本
-      description: 请填写扩展版本；也可注明这是仓库脚本或演示页面的问题。
-      placeholder: "0.8.11"
+      label: Extension version / 扩展版本
+      description: Include the extension version, or identify the affected repository script or demo.
+      placeholder: "0.8.12"
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: 环境
-      description: 浏览器及版本、操作系统；脚本问题请写 Node.js 版本。
-      placeholder: "Chrome 版本、Windows / macOS / Linux"
+      label: Environment / 环境
+      description: Browser version and operating system; include Node.js for script issues.
+      placeholder: "Chrome version, Windows / macOS / Linux"
     validations:
       required: false
   - type: textarea
     id: steps
     attributes:
-      label: 复现步骤
-      description: 使用合成数据描述尽量精简的复现步骤。
+      label: Reproduction steps / 复现步骤
+      description: Provide a minimal reproduction using synthetic data. 请使用合成数据。
     validations:
       required: true
   - type: textarea
     id: behavior
     attributes:
-      label: 预期与实际结果
-      description: 请注明错误码或已脱敏的必要日志片段。
+      label: Expected and actual behavior / 预期与实际结果
+      description: Include only necessary error codes or redacted log excerpts.
     validations:
       required: true
   - type: markdown
     attributes:
       value: >-
-        请勿附上真实聊天、UID、招聘方联系方式、验证码、Cookie、配对令牌、密钥或完整真实导出。安全漏洞请按 SECURITY.md 私下报告，不要公开发布漏洞细节。
+        Do not attach real chats, UIDs, recruiter contacts, verification codes, Cookies, pairing tokens, keys, or complete real exports. Report security issues privately under SECURITY.md. 请勿附上真实聊天或凭据；安全漏洞请按 SECURITY_CN.md 私下报告。

@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "BOSS 沟通记录本地助手"
+  },
+  "extensionDescription": {
+    "message": "按当前 BOSS 账号保存沟通记录，并导出供用户自行分析的事实数据。"
+  },
+  "verificationRequired": {
+    "message": "BOSS 要求人工验证，采集已暂停。"
+  }
+}

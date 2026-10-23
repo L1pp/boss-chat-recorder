@@ -1,190 +1,103 @@
-# 验证与可复现范围
+# Verification and reproducibility
 
-此目录为无本机调试桥的公开展示副本。下文早期调试桥记录描述开发版排查历史，不表示本副本提供这些入口。
+[English](VERIFICATION.md) | [完整中文记录](VERIFICATION_CN.md)
 
-## 0.8.11 本机加密候选版
+This page summarizes recorded acceptance evidence and its limits. The [Chinese record](VERIFICATION_CN.md) retains the full chronological development notes. Test counts and platform observations below belong to their stated versions and dates; they are not a claim that every later version or website state was tested in the same way.
 
-公开候选版对账号归档、运行态和会话记录的新写入值启用 AES-GCM，并自动在同一浏览器配置的 IndexedDB 保存不可导出的密钥。旧明文只读兼容，不自动遍历迁移真实旧库；开发入口继续使用原存储。最低 Chrome 版本为 102，以支持可信上下文存储访问设置。
+This public copy has no local debug bridge. References to one describe historical troubleshooting in a separate development copy. Real exports, account UIDs, and diagnostic logs are not public artifacts.
 
-公开候选完整离线测试 **175 项通过、0 失败**，开发源码完整回归 **209 项通过、0 失败**。其中新增 17 项覆盖真实 WebCrypto 往返、大文本、随机 IV、AAD 错位、失败保留原值、密钥并发与事务提交、重启读取、账号分区清除以及存储访问范围。
+## Current scope
 
-补齐商店素材后再次运行相同回归与构建检查，以上测试仍全部通过。公开目录 **86 个允许文件**、开发目录 **96 个允许文件**均通过检查；PNG 以二进制复制并核对像素尺寸，manifest 包含 16、32、48、128 像素图标。商店运行 ZIP 仅包含扩展运行文件，源码和商店材料另在公开源码 ZIP 中。
+The last store version documented in this repository is 0.8.11; 0.8.12 is an unreleased source candidate. Current development checks are described in [TESTING.md](TESTING.md). First-collection and bilingual UI changes use synthetic fixtures and isolated profiles; they do not imply a new real-account acceptance run or a store submission.
 
-2026-10-18，另用 Chromium 151.0.7922.34 的独立持久配置加载公开扩展，网络关闭，仅写入仓库内两个合成账号（2 会话 / 4 消息与 2 会话 / 3 消息）。10 个已知归档值均为密文封装，原生 IndexedDB 中 CryptoKey 不可导出。通过实际 action 弹窗的正常消息入口读取和导出，数量一致、账号内容不串入。
+Two-real-account switching remains deferred because only one real account was available. Dedicated offline account/store/worker tests and synthetic native-browser isolation are retained. Synthetic account separation and a successful single-account run must not be described as multi-real-account acceptance.
 
-通过原生 CDP 停止后台并观察 `runningStatus=stopped`，再唤醒读取；随后完全关闭测试浏览器，以同一配置重新启动，不重新播种数据。两轮均确认原密钥与既有密文保持不变，正常读取和导出计数不变。这里使用真实浏览器的原生扩展 API，不以 IndexedDB 替身代替重启验收；此前事件驱动替身仍用于离线故障分支测试。摘要见 [合成验收记录](../store/acceptance-0.8.11.json)。
+## 0.8.11 native encryption and restart acceptance
 
-没有接触用户真实浏览器配置、测试 BOSS 账号或提交商店。这些结果不表示真实旧库已迁移加密、双真实账号切换已验收，或 Chrome 102 等其他浏览器版本均已实测。商店截图来自实际公开扩展的合成账号状态，外层说明画面在测试浏览器内排版。
+The public entry encrypts new account-archive, runtime, and conversation-record values with AES-GCM. It automatically persists a non-extractable key in the same browser profile's IndexedDB. Existing plaintext is read compatibly rather than migrated throughout retained real storage. The separate development entry kept its original storage behavior. Minimum Chrome 102 supports trusted-context storage access.
 
-## 无调试公开副本
+The public candidate passed **175 offline tests**, and the development source passed **209**, with zero failures. Seventeen added cases covered real WebCrypto round trips, large text, random IVs, AAD mismatch, preserving old values on failure, key concurrency and transaction commit, restart reads, account clearing, and storage access scope. After store artwork was added, the same regressions and build checks still passed: 86 public allowed files and 96 development allowed files. PNGs were copied as binary and checked for their pixel dimensions; manifest icons include 16, 32, 48, and 128 pixels.
 
-开发目录保留现有本机调试连接；开发目录中的 `npm run prepare:public` 从明确源码清单生成一个新目录，不覆盖现用扩展或真实数据。该命令及生成脚本仅存在于开发目录，公开副本不包含，也无需运行。公开副本移除调试桥、配对界面、临时调试消息入口及 localhost 可选权限，保留同一采集内核、账号分区、固定请求间隔和保存活动回执。
+On **2026-10-18**, isolated Chromium **151.0.7922.34** loaded the public extension with network disabled. Two repository synthetic accounts held 2 conversations/4 messages and 2 conversations/3 messages. All 10 known protected values had ciphertext envelopes; the native IndexedDB CryptoKey was non-extractable. A one-off native action-popup acceptance used normal messages to read and export matching counts without mixing account contents.
 
-生成的公开副本已执行全部离线测试：**158 项通过、0 失败**，覆盖生成 bundle 与真实 worker 的集成、公开启动入口、增量选择、导出及合成账号隔离；保留临时诊断的开发目录全量回归 **192 项通过、0 失败**。此前真实浏览器验收属于同内核开发版；公开启动入口的差异仅做离线验收，没有要求用户重新加载或触发真实采集。
+Native CDP stopped the worker and observed `runningStatus=stopped`, then woke it for reads. Chromium was then fully closed and restarted with the same test profile, without reseeding. Both stages retained the same key and ciphertext and produced unchanged read/export counts. This was native API acceptance, not an IndexedDB substitute. See [acceptance-0.8.11.json](../store/acceptance-0.8.11.json).
 
-## 后续自然变化的导出比对（2026-10-18）
+No personal browser profile or real BOSS account was accessed during this encryption acceptance. It did not migrate a retained real archive, test two real accounts, or cover Chrome 102 and all other browser versions. Store screenshots show synthetic data in the actual public extension, with explanatory framing laid out in the isolated test browser. This historical one-off action-popup check is distinct from the current automated headless suite's limitations.
 
-用户自行更新后，本地调试状态及新全量导出均为 378 个已保存会话、3697 条有消息 ID 的消息。与前份全量导出比较，新增 3 个会话、63 条消息，涉及 14 个归档会话；其中包含 1 个平台求职助手会话。原有会话和消息无丢失，账号、会话和消息 ID 组合无重复，另有 1 条既有消息的时间字段更新。
+## Public copy without diagnostics
 
-这证明自然新增及已有会话变化已保存到后续导出。导出附带的最后一轮元数据为扫描 377、跳过 377、新存 0，因此不能把两份导出间的 63 条新增全部归入最后一轮。已保存的 378 个会话也不等于当轮列表的 377 项。验证范围仍是网站当前可返回记录，不宣称全账号历史完整。
+The development-only `prepare:public` command generated a separate directory from an explicit source list without overwriting the active extension or real data. That command and generator are not public-copy prerequisites. The public copy removes the bridge, pairing UI, temporary diagnostic messages, and localhost optional permission while retaining the same kernel, UID partitions, request interval, and save-activity acknowledgements.
 
-仅有一个真实账号，双真实账号切换按当前条件暂缓；隔离逻辑继续保留离线合成回归，本阶段不要求补充第二账号。
+At that stage, the public copy passed **158 offline tests** and the development copy with diagnostics passed **192**, all with zero failures. Public-startup differences were tested offline; real platform acceptance described below used the same-kernel development copy, rather than a new real collection solely for the public entry.
 
-## 0.8.10 真实采集与独立增量验收
+## 0.8.10 real collection and independent incremental run
 
-2026-10-17，真实 Chrome 重新加载 0.8.10 后，从保留的记录继续本轮采集，最终正常结束；这不是一次从空库开始、全程未中断的运行。随后另行启动独立增量，通过新的 runId 和导出中的 `mode=incremental` 区分续采与新一轮更新。
+On **2026-10-17**, real Chrome reloaded 0.8.10, continued the interrupted run from retained records, and completed it. This was not an uninterrupted empty-library collection. A later independent run had a new run ID and `mode=incremental`, distinguishing it from continuation.
 
-| 项目 | 真实观察结果 |
+| Evidence | Recorded result |
 | --- | --- |
-| 首轮完成 | 列表返回的 375/375 个会话，3634 条有消息 ID 的消息，失败 0 |
-| 最终保存状态 | `completed`，`active=false`，`finalizing=false`，存在完成时间，无错误 |
-| 独立增量 | 约 6 秒完成；扫描 375、跳过 375、选中读取 0、刷新 0、新保存消息 0、失败 0 |
-| 本次更新导出 | `mode=incremental`、`scope.noChanges=true`，会话数组为空 |
-| 增量后全量导出 | 375 个会话、3634 条消息，与首轮基线一致 |
-| 前后消息比对 | 按账号、会话和消息 ID 的组合比较：新增 0、丢失 0、重复 0；方向、内容、时间及媒体等消息事实字段变化 0 |
+| Completed collection | All 375/375 returned conversations; 3,634 messages with IDs; 0 failures |
+| Final state | `completed`, `active=false`, `finalizing=false`, completion time present, no error |
+| Independent incremental | About 6 seconds; scanned 375, skipped 375, selected/refreshed/new messages 0, failures 0 |
+| Latest-update export | `mode=incremental`, `scope.noChanges=true`, empty conversations |
+| All-record export after increment | 375 conversations and 3,634 messages, matching the baseline |
+| Message-set comparison | By account/conversation/message ID: 0 added, lost, or duplicate; 0 changes to direction, content, time, media, or other message facts |
 
-375 个会话均保存到本次接口返回的历史结束页，两个全量导出均无重复会话或缺消息 ID 的消息。导出仍保留 `fullAccountCoverageVerified=false`，不把当前可取历史等同于全账号、全部时期的历史。真实导出和诊断日志留在展示目录之外，本目录仅记录汇总。
+All returned conversations reached the endpoint's available history end. Both all-record exports had no duplicate conversations or messages missing IDs. They retained `fullAccountCoverageVerified=false`: currently available history is not full-account, all-time history. The exports and logs stayed outside the public directory.
 
-该次独立增量没有自然新增或变化会话；后续有变化导出结果见本页首节。只有一个真实账号，双真实账号切换隔离暂缓。该次完成不保证后续不会触发网站验证或其他限制。
+The independent run contained no new or changed conversations. Its success does not guarantee that future requests will avoid verification or other site restrictions.
 
-## 0.8.10 依据真实保存进展等待确认
+## Later natural changes: export comparison on 2026-10-18
 
-持续监测在 0.8.9 的后期捕捉到一次快照 ACK 16.839 秒后返回成功：runtime 读取约 3.0 秒、会话写入约 3.5 秒、索引提交约 4.3 秒、runtime 发布约 5.3 秒。各步骤在推进，但页面对整次 sendMessage 固定等待 15 秒，已先判超时并进入重复收尾。已保存数据保留，故障不能再归为正文未写入或网站验证。
+After the user updated the archive, local diagnostic state and a new all-record export both contained **378 conversations and 3,697 messages with IDs**. Compared with the previous all-record export, there were **3 new conversations and 63 new messages across 14 archived conversations**, including one platform job-assistant conversation. No prior conversation or message was lost. Account/conversation/message identity combinations were unique, and one existing message's time field changed.
 
-0.8.10 用扩展内部单请求 Port 传递保存请求、真实存储活动及最终提交结果。account-store 原有的 begin/end 事件报告活动，没有额外存储轮询、网站请求或定时保活；等待预算改为连续 15 秒无存储活动。多个步骤总耗时超过 15 秒仍可等待成功，真正无进展或端口断开会暂停。仅最终结果算保存确认，进度 ACK 不再回传整份联系人基线。STOP 保留已读取数据的保存收尾；取消通信不等于撤销已经发出的 Chrome 写入，也不会自动切回 sendMessage 重发。
+This establishes that natural additions and changed conversations reached the later export. The final run metadata attached to that export says scanned 377, skipped 377, and newly saved 0, so the 63 additions cannot all be attributed to that last run. The cumulative 378 saved conversations also differ from its 377 returned list entries. Coverage remains limited to records the website supplied.
 
-完整离线回归 **182 项通过、0 失败**，构建与 75 个文件的发布检查通过。新增测试覆盖分步活动超过总预算仍完成、静默超时、断线/取消清理、可信发送者、单 Port 单保存请求，以及实际生成 bundle 与真实 worker 的 Port 隔离/增量集成。真实复验结果见本页首节。
+## Local-save failures and fixes
 
-## 0.8.9 正文按会话提交
+The following observations explain the storage changes. They do not establish why the website previously requested verification or logged the user out.
 
-持续监测捕捉到 0.8.8 再次本地保存超时：同一批次读取旧正文 21.676 秒、写入 5.440 秒，确认总计 28.029 秒；随后最终保存重试 13.089 秒。已保存记录保留，没有网站验证类错误。运行态拆分减少了高频整库操作，但正文仍整库读写，不能随数据增长稳定维持确认预算。
+| Version | Observed failure or change | Offline result and real boundary |
+| --- | --- | --- |
+| 0.8.6 | A progress acknowledgement returned after 19.845 seconds against a 15-second total wait; stop reported `interrupted/BULK_CHECKPOINT_FAILED`, discovered 370/completed 0. Existing records and message counts were unchanged. | 146 tests, 0 failures; 67-file check. First acknowledgement 8.91 seconds. A paired development bridge exposed only status/logs/storage/stop, with no chat bodies or remote start. |
+| 0.8.7 | Removed repeated binding/partition reads and deep copies; retained atomic validation and existing schema. Early batches advanced but later timed out. | 152 tests, 0 failures; 67-file check. Early progress acknowledgements about 3.2–5.7 seconds and first snapshot about 4.0 seconds were partial observations only. |
+| 0.8.8 | Each progress operation previously moved about 17.1 MiB of bodies. A final post-interruption acknowledgement took 28.378 seconds; the original trigger was no longer in the rolling trace. Runtime was separated from bodies. | 161 tests, 0 failures; 67-file check. Synthetic 17 MiB coverage. Later real runtime about 1.43 MiB; status read 133 ms; progress about 0.35–0.45 seconds and first body ACK 5.751 seconds. Later body saves still timed out. |
+| 0.8.9 | Whole-body read 21.676 seconds plus write 5.440 seconds produced a 28.029-second acknowledgement. Per-conversation immutable versions and a single account index replaced whole-body saves while retaining the old root. | 171 tests, 0 failures; 71-file check. Synthetic 22 MiB coverage, failed index commits, UID 1/10 clearing, retry counts, unknown data. Initial real preparation 10.404 seconds and first snapshot ACK 4.149 seconds; a later ACK still exceeded the total budget. |
+| 0.8.10 | A successful 16.839-second save had advancing runtime read (~3.0 s), body write (~3.5 s), index (~4.3 s), and runtime publication (~5.3 s), but the fixed total wait had already timed out. Internal Port activity changed this to 15 seconds of inactivity. | 182 tests, 0 failures; 75-file check. Activity, silence, disconnection, cancellation, sender, Port binding, stop/drain, and generated-bundle integration covered. Real completion and independent increment are recorded above. |
 
-0.8.9 在启动采集前，把旧本地分区一次性整理为按账号、按会话的记录；旧根保留切换前内容。每个正文批次只载入涉及的会话，写入新的记录版本，最后提交单个账号索引及全局摘要，再发布运行态并确认。失败时旧索引仍可读取；运行态发布失败后的重试以已提交正文索引为准，不重复累计消息数。未归属消息、原始样本、观察顺序和未知字段继续保留，不使用 hash。
+Only a final durable result acknowledges saved data. Activity notifications do not add storage polling, website requests, or timer keep-alives. Disconnecting does not cancel already accepted Chrome writes; the client does not automatically resend. Retained old versions and unpublished versions use space until per-account clearing; the split is not a claim that storage immediately shrank.
 
-旧版本记录及未发布记录暂留在该账号版本目录中，空间占用不会立即降低；指定账号清除会通过账号专属版本清单同时处理它们及旧根对应分区。新索引启用后缺失会报本地存储错误，不静默回退旧数据。采集接口、原生 ID、10 秒请求间隔和 15 秒保存超时未改。
+## Earlier development snapshots
 
-全量离线回归 **171 项通过、0 失败**，构建及 71 个文件的发布检查通过。覆盖合成 22 MiB 正文的单会话更新、失败索引提交、初次整理失败、正文成功但运行态发布失败、UID=1 与 UID=10 的隔离清除、同账号跨会话同 MID，以及旧数据无损往返。
+| Version | Recorded checks | Scope and limits at that point |
+| --- | --- | --- |
+| 0.8.0 | 55 tests, 0 failures; 50 allowed files; build and deterministic demo/bundle comparison | Simulated APIs and a VM running real generated bundles and worker modules; no real browser acceptance. |
+| 0.8.1 | 91 tests, 0 failures; 54-file check | Real account/list/partial history access found continued scanning after HTML and unclear interruption UI. Added pause/recovery tests. Fresh identity requests per operation were historical behavior, replaced later. No full real baseline yet. |
+| 0.8.3 | 105 tests, 0 failures; 55-file check | A real response was HTTP 200 `text/html` ending at `/web/passport/zp/verify.html`. Subsequent history stopped and records remained. This established verification, not its cause or a safe rate. Added persisted pause, badge, manual continuation, and recovery tests. |
+| 0.8.4 | 118 tests, 0 failures; 58-file check | After another interruption and user-reported web/mobile logout, removed repeated account requests, shared the 10-second interval, and added local popup cache. Simulated three starts made three identity requests; local operations made none. No live retest or rate guarantee. |
+| 0.8.5 | 113 tests, 0 failures | Returned to prototype 0.7.2's API kernel; kept UID/token bindings, pacing, pauses, and timeouts, while removing separate verification gates, trial state, obsolete rechecks, and total conversation deadlines. No real-account test in that change. |
 
-真实 Chrome 重新加载 0.8.9 后自动重连。首次启动及本地整理观察值 10.404 秒；恢复后首个快照批次 ACK 4.149 秒成功，其中一次会话记录写入 309 毫秒、索引提交 40 毫秒。当时任务恢复推进，后期仍发生本页所述 16.839 秒确认超时；后续完成结果见 0.8.10 真实验收。
+The full Chinese chronology retains additional diagnostic details and the contemporaneous statements of what was still pending. Later evidence above supersedes earlier “not yet completed” notes for the same acceptance stage; it does not erase those historical failures.
 
-## 0.8.8 分离运行态与聊天正文
+## Reproduce offline checks
 
-0.8.7 在部分批次成功后再次以 `BULK_STORAGE_TIMEOUT` 中断。本机记录仍在；正文存储约 17.1 MiB。已取回的 trace 中，中断后的末次进度确认耗时 28.378 秒才返回成功；原始触发请求的完整细节已被弹窗轮询挤出滚动窗口。代码仍让每次进度保存和轮询搬运整库，因此此前减少调用次数不足以解决数据增长后的写入放大。
-
-0.8.8 新增独立运行态记录，保存账号分区、任务绑定、runtime、同步基线及已提交摘要。初始化时仅从原本地记录播种一次；原聊天正文和旧无归属数据保留。之后进度保存、进度查询和调试状态只读写运行态；正文批量保存仍在提交成功后才发布摘要并确认。正文与运行态之间的失败不冒充成功，重试继续使用原消息 ID 去重。调试日志另保留最多 80 条慢操作或失败摘要，避免普通轮询覆盖证据。
-
-全量离线测试 **161 项通过、0 失败**，构建及 67 个文件的发布检查通过。新增回归使用合成 17 MiB 正文，确认进度更新及 worker 重启不访问正文；覆盖旧数据保留、旧令牌不复活、正文成功但运行态发布失败的重试，以及新账号首次发布失败后的数据保留。15 秒保存超时和 10 秒站点请求间隔不变，没有新增网站请求、确认门禁或 hash。
-
-随后用户重新加载 0.8.8，调试连接自动恢复；原正文存储大小未变，记录数保留。实际运行态约 1.43 MiB，状态读取观察值 133 毫秒。用户点击继续后，真实 progress ACK 约 0.35–0.45 秒，首个正文批次 ACK 5.751 秒成功，已跳过 125 个未变化会话并新增保存记录。这是当时的部分运行观察，后续又出现上节所述超时，不能由单批成功保证后续不再中断或网站风控已解决。
-
-## 0.8.6 临时本机调试桥与本地状态确认
-
-0.8.6 让核心存储写入回执不再等待角标和弹窗缓存刷新，避免辅助 UI API 挂起后误报 `BULK_STORAGE_TIMEOUT`。新增临时诊断桥供当前机器观察扩展状态：Node 服务绑定 `127.0.0.1:17374`，需要用户手动启动并在扩展弹窗点击连接。首次配对需在点击时授予 localhost 可选权限；之后扩展可从本地保存的配对状态自动重连。
-
-扩展可接受的诊断命令只有 `status`、`logs`、`storage`、`stop`。桥不能远程开始采集、探测 BOSS 页面或执行任意脚本。`status` 会显示本地账号分区 UID、计数、进度和近期事件摘要；`storage` 返回本地存储字节数；`logs` 只导出白名单 trace 字段，不含聊天正文、Cookie 或令牌。配对令牌保存在展示版之外的本机私有配置中，扩展本地存储另保留一份供自动重连；CLI 会显示导出日志文件的位置。
-
-2026-10-17，Windows：全量离线回归 **146 项通过、0 失败**；`npm run check` 通过，覆盖 67 个允许文件。真实 Chrome 的一次 0.8.6 采集运行中，首个 progress checkpoint 回执在 8.91 秒成功，后续回执在 19.845 秒返回并超过 15 秒等待上限；`stop` 诊断为 `interrupted/BULK_CHECKPOINT_FAILED`，当时 `discovered=370`、`completed=0`。原有本地记录未变化，也没有新增消息。该次具体观察到的是核心本地存储写入确认超时；它本身不能判定此前网站反爬或全端退出的原因。
-
-该次开发版验收中，真实 Chrome 已配对调试桥，`status`、`logs`、`storage` 三项成功；`stop` 也在上述 0.8.6 任务中真实执行。导出的 trace 不含聊天正文。用户授权并点击启动后，采集器正常请求 BOSS；本机调试命令自身不额外请求 BOSS。临时桥保留于开发目录，公开副本已移除该桥及 localhost 可选权限。
-
-## 0.8.7 本地确认路径收敛与部分真实验收
-
-针对上述 0.8.6 checkpoint 回执超时，当前改动集中在本地存储路径：每条 progress/snapshot 消息移除前置的重复整库 binding 读取，仍保留 `updateBoundAccount` 的原子绑定校验；角标和弹窗缓存复用已提交分区，不再为刷新而排队重读；进度轮询改为一次读取分区与 binding；Account Store 去除冗余 JSON 深拷贝，继续使用每次 Chrome storage 读取返回的独立副本。
-
-不改变存储 schema、不加全局内存整库缓存或迁移；15 秒本地保存超时及 10 秒站点请求间隔不变。
-
-全量离线回归 **152 项通过、0 失败**，`npm run check` 通过，覆盖 67 个允许文件。回归确认普通 progress/snapshot 保存仅一次整库读取及一次写入，运行中进度轮询仅一次整库读取；返回对象与底层存储相互独立，失败提交不会修改已保存消息，重试可正常保存。
-
-真实 Chrome 重新加载后自动重连，无需重新配对。用户启动采集后连续完成三批保存，普通 progress ACK 观察值约 3.2–5.7 秒，首个快照 ACK 约 4.0 秒；本地会话和消息数增加。这是 0.8.7 当时的部分运行观察，后续仍发生保存超时；最终完成结果见 0.8.10 验收，不能据单批成功宣称网站风控问题已解决。
-
-## 0.8.5 以原型 0.7.2 为基准收敛
-
-沿用原型默认 API 路径的联系人读取、历史游标分页、增量选择及批量保存。保留固定账号 UID、本地分区与任务令牌、10 秒共享请求间隔、异常暂停、单请求超时和本地保存超时。实际新启动才查询一次当前账号；已有任务返回本机进度，分页与本地操作没有账号请求。
-
-删除独立验证门禁和试运行状态，验证作为普通中断进度；手动继续使用同一启动流程，再遇验证就再次暂停。移除已失效远程复核兼容分支、逐会话总时限及通用操作竞速层，不新增检查、确认步骤、请求配额或 hash。没有切换到被动采集或私有原生客户端。
-
-原项目、真实数据与真实浏览器存储均不参与本轮修改和测试；所有验证使用模拟网络、内存 Chrome API 与合成数据。不进行账号测试或 GitHub 上传。
-
-2026-10-17，Windows：构建成功，完整离线回归 **113 项通过、0 失败、跳过或取消**。其中覆盖原型式“列表→历史”请求顺序、未变化会话跳过、合法页保存与异常暂停、账号分区与旧令牌拒收、已运行任务零额外账号请求、10 秒共享间隔和本地缓存。验证暂停与普通 START 使用同一路径，旧验证元数据不会清空已有记录。
-
-## 0.8.4 减少请求与弹窗本地缓存
-
-0.8.3 的真实验收再次中断，用户报告网页及手机端均被登出。已有本地请求记录显示大量重复账号查询，且这一轮的异常是非成功 JSON 响应，并非 HTML 验证页。验证页暂停只能处理已经出现的响应，不能阻止网站对账号会话作出限制。
-
-本次仅修改三项：删除重复账号请求、所有扩展网站请求共用固定 10 秒最小间隔、弹窗快速显示本地缓存。只有手动开始或继续采集时请求一次账号接口；分页、保存、进度、本地导出、备份、清除和停止均不再查询网站账号。普通开始更新直接使用该次确认的当前账号分区，不新增二次确认；本地缓存清楚标为本地记录账号。
-
-保留已有账号分区、任务令牌、原生消息参与者检查与验证暂停。没有增加批次上限、二次确认、hash、指纹或冻结校验。未完成会话恢复时仍可能从第一页重读，本次没有扩展游标续采功能。
-
-2026-10-17，Windows，Node.js v24.19.0：完整离线回归 **118 项通过、0 失败、跳过或取消**；现有展示目录检查 **58 个允许清单文件**、生成脚本与合成样例一致性通过。真实生成脚本与后台的集成回归确认三次手动启动合计三次账号查询，本地读取、保存和导出均不增加网站账号请求；弹窗缓存命中时不发送后台请求，旧版缺少缓存时只做一次本地初始化。固定间隔、等待取消与账号隔离的模拟回归通过。
-
-此版本不使用真实账号复验，不重试登录，不试探网站风控。弹窗在用户设备上的实际打开耗时尚未测量；固定间隔不是平台认可的安全阈值，不能宣称已经消除限制风险。
-
-## 0.8.3 人工验证暂停与继续
-
-真实 Chrome 的 0.8.1 复验中，历史请求返回 HTTP 200、`text/html`，最终路径为 `/web/passport/zp/verify.html`。该响应之后没有继续请求其他历史页，已保存记录和断点均保留；这轮开始时也确实跳过了此前已完成且未变化的会话。上述证据表明出现了网站人工验证，不能单凭这一现象确定触发原因或一个保证安全的请求速度。
-
-0.8.3 将已知验证页单独分类，增加按账号持久化的暂停状态、扩展角标与人工确认继续入口。等待期间不轮询验证结果；用户确认只允许一次继续尝试，仍收到验证页就再次暂停。身份接口恢复不等于历史接口恢复。另修正弹窗请求等待预算与过期超时提示。
-
-2026-10-17，Windows，Node.js v24.19.0：构建成功，完整离线回归 **105 项通过、0 失败、跳过或取消**；展示目录的 **55 个允许清单文件**、生成文件与合成样例一致性检查通过。没有添加 hash、指纹或冻结校验。这一版的真实 Chrome 行为仍需重新加载扩展后单独复验。
-
-新增回归覆盖验证后暂停并保留记录、人工继续、重复验证再次暂停、后台重建和原标签页关闭后的恢复、恢复启动时刷新弹窗，以及账号隔离。旧版只记录为一般 HTML 异常且缺少验证路径的进度不迁移成验证状态；新机制从本版后续明确识别到的验证事件生效。
-
-私有请求记录、用户导出和截图只保存在原项目已忽略的私有验收目录，没有纳入展示版。
-
-## 0.8.1 异常恢复修复记录
-
-2026-10-17，Windows，Node.js v24.19.0：`npm.cmd run build` 成功，完整离线回归 **91 项通过、0 失败**；`npm.cmd run check` 的 **54 个允许清单文件**、生成文件及合成样例一致性检查通过。
-
-真实 Chrome 验收已确认账号读取、列表获取和部分历史分页可执行，同时发现网站返回 HTML 时仍继续扫描及界面退出不清晰的问题。0.8.1 增加 HTML/HTTP/API 异常暂停、超时、停止保存握手、失联状态恢复及旧断点保留。账号身份仍按每次操作独立 fresh 请求验证，不缓存或合并在途身份响应。
-
-新增回归覆盖：后续页失败保留合法页、非零 API code 暂停整轮、停止/超时有界结束、首次列表失败保留旧完成项、最终 checkpoint 失败时本地结束，以及真实生成 bundle 的取消错误类型。真实请求与截图只保留在原项目已忽略的私有验收目录；本仓库不包含它们。
-
-**完整真实基线和后续独立增量尚未完成；仅有一个可用真实账号，双账号切换隔离未实测。**
-
-## 0.8.0 离线整理记录
-
-2026-10-17，Windows，Node.js v24.19.0：
-
-| 检查 | 结果 |
-| --- | --- |
-| `npm.cmd run build` | 成功生成两个内容脚本和扩展内 MIT 副本 |
-| `npm.cmd test -- --test-reporter=spec` | 55 项通过，0 失败、跳过或取消 |
-| `npm.cmd run check` | 50 个允许清单文件通过；构建逐字一致，合成样例重建一致；未匹配检查器列出的凭据格式 |
-| 独立代码审查 | 已报账号切换、清除目标、控制队列、迟到探测与 UI 竞态均有修复及回归，未发现剩余阻断项 |
-
-其中一项集成测试直接在隔离 JavaScript VM 中运行本目录的真实生成 bundle 和真实后台模块，证明消息契约、两个账号相同 HR/MID、各自基线、后台重建及单账号清除能够配合工作。它仍然使用模拟网络与内存 Chrome API，不是真实浏览器验收。
-
-## 本地命令
-
-使用 Node.js 24 或更新版本，无第三方依赖安装步骤。
-
-```powershell
+```sh
 npm run build
 npm run demo
 npm test
 npm run check
 ```
 
-`npm run build:check` 以同一生成函数逐字比较已提交 bundle，不写入文件。`npm run check` 还检查展示目录的允许文件范围、软链接、常见凭据格式和不应进入发布包的采集文件。检查结果只报告文件位置或类别，不打印匹配内容。
+Node.js 24 or later is sufficient for this layer without third-party dependencies. `build:check` compares output from the same generator without writing. Public-source checks include allowed files, symlinks, known credential patterns, and excluded collection artifacts. Diagnostics report paths/categories rather than matched secrets. A clean scan does not establish that all possible personal information was detected.
 
-## 离线验证可以说明什么
+Offline fixtures establish pagination, native ID handling, deduplication, paused/failed/retry selection, account/task boundaries, late-write rejection, exports, unknown times, media summaries, and deterministic demos. Isolated Chromium separately covers native storage and lifecycle. Neither layer connects to a real recruitment account or reads the original project's `data/` directory.
 
-- 模拟分页的原生消息 ID、顺序、去重、游标停滞和结束条件。
-- 新会话、未变化、变化和失败重试的增量选择。
-- 当前账号无法识别、采集中切换、跨账号相同 HR/消息 ID、失效令牌、后台重建和清除后的迟到消息。
-- 当前账号导出范围、完整保存上下文、无变化导出为空、未知时间和媒体摘要。
-- 人工验证暂停的账号归属、继续尝试、重复验证、后台重建与迟到任务边界。
-- 合成演示生成的确定性，以及生成文件与离线预览不需要网络。
+## Unverified boundaries
 
-测试使用内存 Chrome API、模拟响应与系统临时目录，不操作真实浏览器，不连接招聘平台或本机持久服务，不读取原项目 `data/`。合成演示的两个账号是数据样例；真实隔离的证据来自账号存储、后台与采集器的专用测试，而不是仅靠演示文件分目录。
+- Two-real-account switching remains deferred; no synthetic test is described as a substitute.
+- The 0.8.10 completion phase did not observe the live verification-pause/manual-resume branch. Earlier verification evidence and offline tests do not establish its current site behavior.
+- Internal API changes, verification triggers, and an approved safe request rate remain unknown.
+- All large-archive sizes, prolonged network interruptions, browser versions, operating systems, and lifecycle combinations have not been exhausted.
+- Automated CI is not store approval, a distribution license, or proof of continued website compatibility.
 
-## 尚未验证
-
-- 合成预览的浏览器视觉验收：本轮浏览器工具的 URL 策略拒绝 `file://` 本地页面，未执行该项检查；未通过其他浏览器通道绕过。生成器、数据和页面脚本检查仍属于离线测试范围。
-- 当前版本在真实 Chrome 中触发网站验证后的暂停提醒及手动继续；本次 0.8.10 完成阶段没有观察到该分支。
-- 双真实账号切换隔离：本阶段暂缓，保留离线合成回归，不将单账号结果冒充多账号实测。
-- 内部接口未来兼容性、触发网站验证的具体规则及稳定的请求频率边界。
-- 大规模历史的存储容量与性能、网络长时间中断及全部浏览器生命周期组合。
-- 商店审核与公开分发许可。
-
-已有静态站点源码为账号接口路径和字段提供依据，模拟测试证明隔离规则按预期执行；这些证据不能代替线上兼容性验收。当前已完成上述受控只读采集、无变化独立增量和导出比对，不进行商店提交或 GitHub 上传。
+Earlier browser tooling denied a local `file://` preview and that attempt did not bypass the restriction. Later isolated synthetic browser/UI work is recorded separately; the earlier blocked attempt must not be presented as a completed visual check. Store approval and source publication are also separate events from the historical tests above.

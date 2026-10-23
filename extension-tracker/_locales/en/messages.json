@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "BOSS Chat Recorder · 沟通记录"
+  },
+  "extensionDescription": {
+    "message": "Save chat records locally for the current BOSS Zhipin account and export factual data for your own analysis."
+  },
+  "verificationRequired": {
+    "message": "BOSS requires manual verification. Collection is paused."
+  }
+}

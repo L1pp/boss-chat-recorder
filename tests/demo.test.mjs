@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 import { generateDemo } from '../scripts/generate-demo.mjs';
 
 async function readJson(filePath) {
@@ -28,6 +29,60 @@ async function generatedDirectory(t) {
   return directory;
 }
 
+function openPreview(html, navigator) {
+  function element(tag, attributes = {}) {
+    return {
+      tag, attributes, children: [], value: '', textContent: '',
+      dataset: Object.fromEntries(Object.entries(attributes)
+        .filter(([key]) => key.startsWith('data-'))
+        .map(([key, value]) => [key.slice(5), value])),
+      listeners: {},
+      append(child) { this.children.push(child); },
+      replaceChildren(...children) { this.children = children; },
+      setAttribute(key, value) { this.attributes[key] = value; },
+      addEventListener(name, listener) { this.listeners[name] = listener; },
+    };
+  }
+  const nodes = [...html.matchAll(/<([a-z][\w-]*)\b([^>]*)>/giu)].map(([, tag, raw]) => {
+    const attributes = Object.fromEntries([...raw.matchAll(/([\w-]+)="([^"]*)"/gu)]
+      .map(([, key, value]) => [key, value]));
+    return element(tag, attributes);
+  });
+  const byId = id => nodes.find(node => node.attributes.id === id);
+  byId('demo-data').textContent = html.match(/<script id="demo-data" type="application\/json">([\s\S]*?)<\/script>/u)[1];
+  let dataReads = 0;
+  const document = {
+    title: '', documentElement: {},
+    getElementById: byId,
+    querySelectorAll(selector) {
+      return nodes.filter(node => Object.hasOwn(node.attributes, selector.slice(1, -1)));
+    },
+    createElement: tag => element(tag),
+    createDocumentFragment: () => element('fragment'),
+  };
+  vm.runInNewContext(html.match(/<script>\s*([\s\S]*?)<\/script>/u)[1], {
+    document, navigator,
+    JSON: {
+      parse(value) { dataReads += 1; return JSON.parse(value); },
+      stringify: JSON.stringify,
+    },
+  });
+  const text = node => node.textContent + node.children.map(text).join('\n');
+  return {
+    document, byId,
+    text: () => text(byId('preview')),
+    selectLanguage(value) {
+      const picker = byId('language');
+      picker.value = value;
+      picker.listeners.change();
+    },
+    click(attribute, value) {
+      nodes.find(node => node.attributes[attribute] === value).listeners.click();
+    },
+    dataReads: () => dataReads,
+  };
+}
+
 test('demo generation is reproducible and provides a fully offline preview', async () => {
   const firstDirectory = await mkdtemp(path.join(os.tmpdir(), 'boss-demo-first-'));
   const secondDirectory = await mkdtemp(path.join(os.tmpdir(), 'boss-demo-second-'));
@@ -49,6 +104,55 @@ test('demo generation is reproducible and provides a fully offline preview', asy
     await rm(firstDirectory, { recursive: true, force: true });
     await rm(secondDirectory, { recursive: true, force: true });
   }
+});
+
+test('offline preview selects the browser language, with English as the fallback', async t => {
+  const directory = await generatedDirectory(t);
+  const html = await readFile(path.join(directory, 'index.html'), 'utf8');
+  for (const language of ['zh', 'zh-CN', 'zh-TW', 'zh-HK']) {
+    const preview = openPreview(html, { language, languages: ['en-US', 'zh-CN'] });
+    assert.equal(preview.document.documentElement.lang, 'zh-CN');
+    assert.equal(preview.byId('language').value, 'zh');
+    assert.match(preview.text(), /求职账号甲 · 本轮已更新的会话/u);
+  }
+  for (const navigator of [
+    { language: 'en-US', languages: ['zh-CN'] },
+    { language: 'fr-FR', languages: ['zh-CN'] },
+    {},
+  ]) {
+    const preview = openPreview(html, navigator);
+    assert.equal(preview.document.documentElement.lang, 'en');
+    assert.equal(preview.document.title, 'Local synthetic demo');
+    assert.match(preview.text(), /Job seeker A · Conversations updated this round/u);
+    assert.match(preview.text(), /Recruiter ID: demo-hr-shared/u);
+  }
+});
+
+test('language switching redraws the selected scope without translating or rereading messages', async t => {
+  const directory = await generatedDirectory(t);
+  const html = await readFile(path.join(directory, 'index.html'), 'utf8');
+  const preview = openPreview(html, { language: 'zh-CN' });
+  const originalData = preview.byId('demo-data').textContent;
+  preview.click('data-account', 'account-b');
+  preview.click('data-scope', 'all');
+  preview.selectLanguage('en');
+  assert.equal(preview.document.documentElement.lang, 'en');
+  assert.match(preview.text(), /Job seeker B · All saved conversations/u);
+  assert.match(preview.text(), /Conversations: 2 · No changes: No/u);
+  assert.match(preview.text(), /Recruiter · .*欢迎了解示例甲的数据分析岗位。/u);
+  assert.match(preview.text(), /Job seeker · .*您好，我可以补充项目经验。/u);
+  assert.match(preview.text(), /Available history complete: No/u);
+  preview.selectLanguage('zh');
+  assert.match(preview.text(), /求职账号乙 · 全部已保存的会话/u);
+  assert.match(preview.text(), /会话数：2 · 无变化：否/u);
+  assert.match(preview.text(), /欢迎了解示例甲的数据分析岗位。/u);
+  assert.equal(preview.byId('demo-data').textContent, originalData);
+  assert.equal(preview.dataReads(), 1);
+  preview.click('data-scope', 'noChange');
+  preview.selectLanguage('en');
+  assert.match(preview.text(), /No changes this round/u);
+  assert.match(preview.text(), /Conversations: 0 · No changes: Yes/u);
+  assert.doesNotMatch(preview.text(), /欢迎了解/u);
 });
 
 test('the two accounts may share HR and message ids without sharing conversations or messages', async t => {

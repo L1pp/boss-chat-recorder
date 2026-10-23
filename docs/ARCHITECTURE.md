@@ -1,68 +1,76 @@
-# 架构与账号隔离
+# Architecture and account boundaries
 
-## 0.8.11 公开候选版的存储适配
+[English](ARCHITECTURE.md) | [简体中文](ARCHITECTURE_CN.md)
 
-账号存储可以注入兼容 `storage.local` 的 AES-GCM 适配器；仅公开启动入口启用，原采集脚本、请求间隔、UID 分区、提交顺序和保存 Port 不变。适配器保护账号根、运行态及会话记录的值，每次写入独立随机 IV，并以存储键和密钥标识作为 GCM additionalData。整批加密成功后才提交存储，不增加 hash 或网站请求。
+## Local encryption introduced in 0.8.11
 
-浏览器自动生成不可导出的 AES-256 CryptoKey，IndexedDB readwrite 事务选定并持久化唯一密钥；事务完成前不返回新密钥，多个提供者并发时复用已提交的同一把密钥。`storage.local` 使用 `TRUSTED_CONTEXTS`，页面脚本仍走既有 runtime 通道。密钥缺失、密文损坏或访问设置失败以本地错误停止，不自动换密钥、清空数据或回退明文写入。
+The account store accepts an AES-GCM adapter compatible with `storage.local`. The public startup entry enables it without changing the collector, request interval, UID partitions, commit order, or storage Port. It encrypts account roots, runtime records, and conversation-record values with a fresh random IV for each write, using the storage key and key identifier as GCM additional authenticated data. A batch is committed only after all encryption succeeds; this adds no content hashes or website requests.
 
-旧明文只读取兼容，不批量迁移旧记录；新安装的公开候选版默认保护新写入值。UID 键名、轻量缓存和用户下载的 JSON 不在正文加密范围。密钥与数据都在同一用户设备上，这不是对本机管理员或恶意程序的隔离措施。
+The browser generates a non-extractable AES-256 CryptoKey. An IndexedDB readwrite transaction chooses and persists the single key, and the provider does not return a new key before the transaction commits. Concurrent providers reuse the committed key. `storage.local` uses `TRUSTED_CONTEXTS`; page scripts continue to use the existing runtime channel. Missing keys, damaged ciphertext, or failure to set the access level cause a local error, without replacing the key, clearing data, or falling back to plaintext writes.
 
-## 采集链路
+Existing plaintext has read compatibility only; retained records are not migrated in bulk. UID key names, lightweight UI caches, and downloaded JSON are outside the encrypted-body scope. The key and data share one device and browser profile, so this is not isolation from a local administrator or malicious software controlling that profile.
 
-采集内核以原型 0.7.2 为基准：读取联系人列表、按原生更新时间选择会话、沿消息游标分页、分批保存。用户点击扩展后，`activeTab` 允许扩展在当前已授权的沟通页执行随包脚本。若同一任务仍在运行，直接返回本机进度；实际新启动时确认一次账号，选择该 UID 的同步基线并登记本地任务令牌。采集在页面中异步执行，弹窗不是任务的生命周期所有者。
+## Collection path
 
-使用的同源只读接口：
+The kernel retains prototype 0.7.2's contact-list reading, selection by native update time, history cursor pagination, and batch saves. After the user clicks the extension, `activeTab` permits bundled scripts on the authorized chat page. If the task is already running, the extension returns local progress. A genuinely new start confirms the account once, chooses its UID baseline, and registers a local task token. Collection runs asynchronously in the page; the popup does not own the task lifetime.
 
-| 用途 | 路径 | 范围 |
+The same-origin read-only endpoints are:
+
+| Purpose | Path | Scope |
 | --- | --- | --- |
-| 当前账号 | `/wapi/zpuser/wap/getUserInfo.json` | 成功响应的 `zpData.userId` |
-| 会话列表 | `/wapi/zprelation/friend/geekFilterByLabel` | 当前页面 label 0 列表请求所返回的联系人 |
-| 历史消息 | `/wapi/zpchat/geek/historyMsg` | 指定联系人当前可取得的消息分页 |
+| Current account | `/wapi/zpuser/wap/getUserInfo.json` | `zpData.userId` in a successful response |
+| Conversation list | `/wapi/zprelation/friend/geekFilterByLabel` | Contacts returned by the page's label 0 list request |
+| Message history | `/wapi/zpchat/geek/historyMsg` | Currently available history pages for the selected contact |
 
-请求通过浏览器正常登录态认证，代码不直接读取 Cookie、框架内部存储或浏览器凭据。仅在用户启动或继续采集时，以一次 fresh GET 确认账号；分页、保存、进度和本地导出不重复查询账号。账号请求保留 `cache: no-store`，列表和历史使用浏览器默认缓存策略。接口适配来自原工程已有静态研究，没有复制站点 bundle 源码。
+Requests use the normal browser session. Code does not directly read Cookies, framework-internal storage, or browser credentials. A new start or resume confirms the account with one fresh GET; pagination, saving, progress, and local exports do not repeat that lookup. The account request uses `cache: no-store`; list and history requests use the browser's default cache policy. The adapter derives from the original project's static API research, without copying site bundle source.
 
-三个接口共用后台的固定 10 秒请求间隔。尚未轮到的请求在本地等待，停止任务会取消等待；网络超时从实际请求阶段计算。此设置减少请求密度，不保证网站不会限制内部接口访问。
+All three endpoints share the background's fixed 10-second minimum interval. Requests wait locally for a slot; stopping cancels pending waits. Network timeout starts at the actual request stage. This reduces request density but does not guarantee the site will permit internal API access.
 
-列表参数从当前页面资源请求记录中发现，仅接受相同 origin、指定路径及 label 0，不包含原账号的硬编码 `encryptSystemId`。历史每页 20 条，使用原生字符串消息 ID 和 `maxMsgId` 游标，避免大整数精度损失。
+List parameters are discovered from the current page's resource request records, limited to the same origin, exact path, and label 0. There is no hard-coded personal `encryptSystemId`. History pages contain up to 20 messages and use native string message IDs and the `maxMsgId` cursor to avoid large-integer precision loss.
 
-## 账号边界
+## Account boundaries
 
-账号 UID、招聘者 UID 和消息 ID 是三个不同层级。招聘者与消息 ID 可以在不同本人账号中重合，所以仅按招聘者 ID 去重不足以隔离本人账号。
+The account UID, recruiter UID, and message ID belong to different levels. Recruiter and message IDs can overlap across a user's accounts, so recruiter-only deduplication does not separate those accounts.
 
-1. 每个本人 UID 分别保存 state、runtime 和已完成历史基线。
-2. 手动启动采集时确认当前网站账号；本地显示与导出明确指定 UID，不把上次查看账号宣称为当前登录者。
-3. 页面任务固定启动时的 UID 与采集令牌；每个批次都携带这两个字段。
-4. 后台保存时核对真实发送者标签、固定 UID 与有效令牌，历史消息继续核对原生参与者。不会为每页或每次保存再查询网站账号。新的启动确认账号发生变化时，旧任务结果不能归入新账号。
-5. 清除账号时同时撤销该账号任务令牌，防止异步结果把清空的数据写回来。
-6. 旧版 `bossReadonlyTracker.v2` 没有可靠的本人归属，不自动认领、不混入正常导出、不覆盖原值。
+1. Each account UID has its own state, runtime, and completed-history baseline.
+2. A manual start confirms the website account. Local display and export name a specific UID and do not describe the last viewed local account as the current website login.
+3. A page task fixes its starting UID and token; every batch carries both.
+4. The background verifies the actual sender tab, fixed UID, and live token. History messages also retain native participant checks. There is no website account lookup for each page or save. Results from an earlier task cannot be assigned to a newly confirmed account.
+5. Clearing an account revokes its tokens so that asynchronous results cannot restore cleared data.
+6. Legacy `bossReadonlyTracker.v2` has no reliable owning account. It is not automatically claimed, mixed into regular exports, or overwritten.
 
-账号 UID 属于用户数据；分区是数据正确性措施，不是加密或对本机用户的访问控制。本机扩展存储和用户下载的 JSON 仍应由用户妥善管理。
+UIDs are user data. Partitioning is a correctness measure, not encryption or access control against the local user. Local storage and downloaded JSON still need appropriate care.
 
-弹窗从独立的轻量本地视图显示计数与进度，无需等待网站或先载入全部聊天。缓存更新不包含聊天正文；实际导出仍读取所选账号的存储分区。
+The popup renders counts and progress from a separate lightweight local view, without waiting for the website or loading the full chat archive. Cache updates exclude chat bodies; exports still read the selected account partition. The local collection-history flag distinguishes a genuinely new account from a completed zero-record run; tab progress and stop targets remain separate.
 
-## 增量、持久化与导出
+## Incremental collection, commits, and exports
 
-0.8.10 的保存通信使用扩展内部 `bossReadonlyTracker.storage.v1` Port，每个连接只承载一个既有 BULK_PROGRESS 或 BULK_SNAPSHOTS 请求。后台只向等待者报告现有 account-store 存储 begin/end 活动，真正提交后才返回结果；客户端据此计算 15 秒无进展超时，避免把多个正常步骤的总耗时误判为失联。没有新增网站请求或定时探测。端口断开不会撤销已接受的持久化；客户端不自动重发，STOP 仍等待已读取内容收尾。
+Since 0.8.10, save communication uses the internal `bossReadonlyTracker.storage.v1` Port. Each connection carries one existing `BULK_PROGRESS` or `BULK_SNAPSHOTS` request. The background reports existing account-store begin/end activity and sends success only after the durable commit. The client uses a 15-second *inactivity* timeout rather than treating the total time of several advancing storage steps as a lost connection. There is no added website request or periodic probe. Disconnecting does not revoke an accepted write; the client does not automatically resend, and STOP still drains data already read.
 
-0.8.9 正文使用 `bossReadonlyTracker.conversations.v1:<UID>:` 下的会话记录。首次启动在同一账号存储队列内整理旧正文，成功提交索引后才启用；原根保留切换前数据。此后快照只读写相关会话，导出和新任务准备按需重组完整 state。联系人、原始样本、消息、列表行按 identity 组织，全局观察及未知字段保留，未归属消息不丢弃。
+Since 0.8.9, bodies use conversation records under `bossReadonlyTracker.conversations.v1:<UID>:`. Before collection first uses this layout, the account's serialized store queue organizes legacy bodies and commits an index; the original root is retained. Later snapshots read and write only the affected conversations. Exports and new-task preparation reconstruct complete state when needed. Contacts, raw samples, messages, and list rows are organized by identity, while global observations, unknown fields, and unassigned messages are preserved.
 
-正文记录使用新的随机版本 ID。先登记账号专属版本清单、写新记录，再提交单个索引，最后发布运行态及确认；旧记录不原地覆盖。局部统计以已提交索引的全局计数加本次变化计算，而非用可能落后的运行态累加。指定账号清除同时移除旧根分区、该 UID 的已发布/未发布版本及运行态绑定，不读取其他账号或调试凭证。旧版本暂留，不在采集中增加后台清理任务。
+Body records use fresh random version IDs. The store registers the account-specific version list, writes new records, commits a single index, then publishes runtime and acknowledges success. Existing records are not overwritten in place. Updated statistics derive from the committed index and this change, rather than accumulating on a possibly stale runtime view. Clearing a UID removes its old root partition, published and unpublished record versions, and runtime bindings without reading other accounts or diagnostic credentials. Old versions remain until clearing; collection does not add a background cleanup job.
 
-0.8.8 将高频运行态保存在 `bossReadonlyTracker.accountRuntime.v1`，正文继续使用 `bossReadonlyTracker.accountPartitions.v1`。运行态记录包含 UID 分区、任务绑定、进度、同步基线及已提交摘要，不保存完整聊天 state；原有同步基线仍含联系人原生元数据，可能包含会话预览。打开弹窗、进度轮询及普通进度保存无需重读正文。首次初始化只从原本地分区读取一次，之后旧正文内的运行态和旧令牌不再作为恢复来源。
+Since 0.8.8, high-frequency runtime is stored in `bossReadonlyTracker.accountRuntime.v1`, separately from the old `bossReadonlyTracker.accountPartitions.v1` body root. Runtime holds UID partitions, bindings, progress, baselines, and committed summaries, rather than complete chat state. Native contact metadata in a baseline may include conversation previews. Popup opening, progress polling, and ordinary progress saves do not reread bodies. One-time bootstrap reads the original local partition; old body-embedded runtime and tokens are not later recovery sources.
 
-所有账号存储操作继续共用串行队列。正文批次先合并当前事务副本并持久化，再发布运行态摘要和成功确认；多次写入不假定为一个原子事务。发布失败可重试，消息仍按原生 ID 去重。初次发布失败也保留已经落盘的正文，旧任务绑定不会因此恢复。导出与新任务准备按需读取正文并叠加当前运行态。
+All account-store operations share a serial queue. A body batch merges its transaction copy and persists it before publishing runtime and acknowledging success. Multiple writes are not assumed to be one atomic transaction. A failed publication can be retried while messages remain deduplicated by native IDs. Even the first failed publication retains already persisted bodies without reviving an old binding. Exports and task preparation read bodies as needed and overlay current runtime.
 
-增量选择要求：同一账号、同一原生联系人、此前已完成历史、原生 `updateTime` 未变。否则重新读取当前可得历史。实际保存按消息 ID 更新，缺 ID 的消息保留为观察，不能宣称已经去重。
+A conversation is skipped only for the same account and native contact, with previously completed history and unchanged native `updateTime`. Otherwise the collector reads currently available history again. Saves update messages by ID; observations lacking an ID remain observations and cannot be claimed as deduplicated messages.
 
-网站返回 `hasMore=false` 只证明该会话当前接口的分页边界；列表没有全账号历史分页证明。状态保留中断、失败和覆盖信息，不把最早可取消息包装成历史第一条，也不把首次保存旧消息称为当日新增沟通。
+`hasMore=false` establishes only the endpoint's current history boundary for that conversation. The contact list does not establish all-time account coverage. State retains interruptions, failures, and coverage limits. The earliest available message is not presented as the first-ever message, and a historical message saved for the first time is not described as new communication that day.
 
-网站返回 HTML、非成功接口响应或单请求超时时，本轮停止并保留已保存页及进度。明确验证页以 `SITE_VERIFICATION_REQUIRED` 标记中断，并显示“验”角标；它是同一任务进度中的一种暂停原因，不建立独立验证门禁或试运行状态。
+HTML responses, unsuccessful API results, and single-request timeouts stop the run while retaining saved pages and progress. A recognized verification page records `SITE_VERIFICATION_REQUIRED` and shows a verification badge. It is a pause reason in ordinary task progress, not a separate verification gate or trial mode.
 
-用户在网站手动验证后，仍使用普通启动流程继续。`RESUME_AFTER_VERIFICATION` 仅作为旧入口的兼容别名；没有额外确认、验证探测或自动重试。新任务得到正常运行进度后替换旧暂停提示，若再收到验证响应就再次暂停。账号和旧任务结果仍由原有 UID 分区与令牌边界处理。
+After completing verification manually on the website, the user uses the normal start/resume flow. `RESUME_AFTER_VERIFICATION` remains a compatibility alias only. There is no extra confirmation, verification probing, or automatic retry. Normal new progress replaces the earlier pause; another verification response pauses again. Existing UID and token boundaries still apply.
 
-最近更新导出按本轮实际读取并保存的会话选择，再保留其完整已保存上下文；全部导出只遍历当前账号分区。导出不触发模型调用，不生成规则招聘结论。
+Latest-update exports select conversations actually read and saved in that run and include their full saved context. All-record exports traverse only the selected account. Exporting does not call a model or generate recruitment judgments.
 
-## 独立展示版范围
+## Interface languages
 
-保留接口采集、账号存储、事实模型、AI 导出及合成测试。旧 DOM 随手记录、CDP、SQLite 开发归档和原型控制桥没有导入。公开副本已移除开发版临时本机调试桥及 localhost 可选权限，保留内部保存 Port 与真实存储活动回执。
+The popup supports Simplified Chinese and English. Chinese browser locales initially select Chinese and all other or missing locales select English; an explicit switch is remembered locally and updates interface text without changing chat facts, account partitions, or collection behavior. Developer documentation defaults to English and retains linked Chinese versions. Localization is not a request to translate or upload stored messages.
+
+Browser-managed extension names and descriptions use Chrome's extension-localization mechanism. The popup's manual switch does not promise to change those browser fields at the same time.
+
+## Public-source scope
+
+The public copy includes API collection, account storage, the fact model, JSON exports, and synthetic tests. Earlier DOM recording, CDP collection, SQLite development archives, and prototype control bridges are not imported. The temporary local debug bridge and localhost optional permissions are absent; the internal save Port and actual storage-activity acknowledgements remain.

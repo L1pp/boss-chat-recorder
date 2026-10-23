@@ -1,30 +1,34 @@
-# 更新记录
+# Changelog
 
-本文件记录公开版的重要变化。未列出的内部开发版本不代表 Chrome Web Store 已发布版本。
+[English](CHANGELOG.md) | [简体中文](CHANGELOG_CN.md)
+
+This file records notable public-source changes. Internal development versions and unreleased entries do not establish what is published on the Chrome Web Store.
 
 ## Unreleased
 
-### 开发与测试
+### Development and tests
 
-- 增加 Linux 与 Windows 离线检查，以及使用合成数据的 Linux Chromium 浏览器测试。
-- 增加 LCOV 测试覆盖率报告；报告用于观察，不设置覆盖率通过门槛。
-- 补充贡献、安全报告和 issue / pull request 模板。
+- Add Linux and Windows offline checks and synthetic Linux Chromium regression.
+- Add LCOV coverage reports for inspection, without a passing-percentage gate.
+- Add contribution and security guidance plus issue and pull request templates.
 
-## 0.8.12（待发布）
+## 0.8.12 (unreleased)
 
-- 首次采集显示独立引导及“开始首次采集”入口；已有记录、继续采集与人工验证按本地状态展示对应操作。
-- 首次引导提供 BOSS 沟通页入口，保留原有的采集页面识别；失败后可直接重试，已有进度会退出首次引导。
-- 修复零记录采集完成后换标签页又显示首次引导的问题，采集历史按账号保存在本地，当前标签页的进度与停止操作保持独立。
+- Show dedicated first-collection guidance and a first-collection action; use local state to distinguish existing archives, resumable runs, and manual verification.
+- Link to the BOSS chat page while retaining existing page recognition; allow retry after a failed start and leave the welcome view when progress appears.
+- Preserve per-account collection history so that completing a run with zero records and then opening another tab does not incorrectly show the welcome view. Progress and stop operations remain tied to the current tab.
+- Add Chinese and English popup text, initial browser-language selection with an English fallback, and a locally remembered language switch. Saved chats retain their original language.
+- Use English developer documentation by default and retain linked Chinese versions, including README, contribution, security, architecture, testing, and release guidance.
 
 ## 0.8.11
 
-### 功能
+### Features
 
-- 新写入的本地归档使用 AES-GCM 加密，密钥由浏览器保存；不要求用户设置密码或解锁。
-- 保留对既有明文归档的兼容读取；不会自动转换全部旧数据。
-- 用户主动导出的 JSON 仍为明文，扩展不会自动把记录上传给 AI 服务。
+- Encrypt new local archive writes with AES-GCM and a browser-persisted key, without requiring a password or unlock step.
+- Keep compatibility reads for existing plaintext archives; do not automatically convert all retained data.
+- Keep user-exported JSON in plaintext. The extension does not automatically upload records to an AI service.
 
-### 验证范围
+### Verification scope
 
-- 在独立 Chromium 环境中以合成账号验证加密落盘、后台停止后唤醒，以及浏览器重启后的读取和导出。
-- 双真实账号切换未完成验证；离线隔离测试不能替代该验证。
+- Use synthetic accounts in isolated Chromium to verify encrypted storage, worker stop/wake, and reading/export after browser restart.
+- Two-real-account switching has not been verified. Offline isolation tests do not replace that acceptance.

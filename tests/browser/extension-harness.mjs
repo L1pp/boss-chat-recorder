@@ -33,11 +33,12 @@ export async function getExtensionWorker(context, extensionId) {
   return context.waitForEvent('serviceworker', { predicate: isExtensionWorker });
 }
 
-async function launchOfflineExtension(profilePath, extensionPath, externalRequests) {
+async function launchOfflineExtension(profilePath, extensionPath, externalRequests, browserLocale) {
   const context = await chromium.launchPersistentContext(profilePath, {
     channel: 'chromium',
     headless: true,
     viewport: { width: 480, height: 760 },
+    locale: browserLocale,
     acceptDownloads: false,
     args: [
       `--disable-extensions-except=${extensionPath}`,
@@ -46,6 +47,7 @@ async function launchOfflineExtension(profilePath, extensionPath, externalReques
       '--disable-component-update',
       '--disable-sync',
       '--no-first-run',
+      `--lang=${browserLocale}`,
       '--host-resolver-rules=MAP * ~NOTFOUND',
     ],
   });
@@ -57,7 +59,7 @@ async function launchOfflineExtension(profilePath, extensionPath, externalReques
   return context;
 }
 
-export async function createExtensionHarness(testInfo) {
+export async function createExtensionHarness(testInfo, { browserLocale = 'zh-CN' } = {}) {
   const tempRoot = await mkdtemp(join(tmpdir(), tempPrefix));
   let harness;
   try {
@@ -76,9 +78,11 @@ export async function createExtensionHarness(testInfo) {
     externalRequests: [],
     context: null,
     extensionId: null,
+    browserLocale,
 
     async startContext() {
-      this.context = await launchOfflineExtension(this.profilePath, this.extensionPath, this.externalRequests);
+      this.context = await launchOfflineExtension(this.profilePath, this.extensionPath, this.externalRequests,
+        this.browserLocale);
       this.contexts.push(this.context);
       this.context.on('page', page => this.pages.add(page));
       const worker = await getExtensionWorker(this.context, this.extensionId);

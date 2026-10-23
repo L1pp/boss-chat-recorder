@@ -2,41 +2,76 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import * as popupI18n from '../extension-tracker/i18n.mjs';
 
-const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../extension-tracker/popup.js', import.meta.url), 'utf8')
+  .replace(/^import\s+\{[^}]+\}\s+from\s+['"]\.\/i18n\.mjs['"];?\s*/mu, '');
+const html = readFileSync(new URL('../extension-tracker/popup.html', import.meta.url), 'utf8');
 const POPUP_VIEW_KEY = 'bossReadonlyTracker.popupView.v1';
+const LANGUAGE_KEY = popupI18n.LANGUAGE_STORAGE_KEY;
+const initialStorageKeys = [POPUP_VIEW_KEY, LANGUAGE_KEY];
 const ids = ['#account', '#account-card', '#contact-count', '#message-count', '#progress-card', '#progress',
   '#status', '#refresh', '#counts', '#first-run-guide', '#export-actions', '#record-tools', '#update-incremental', '#update-full', '#stop',
-  '#export-latest', '#export-all', '#backup', '#clear'];
+  '#export-latest', '#export-all', '#backup', '#clear', '#language-select', '#language-status'];
 
-function makePopup({ popupView = null, sendMessage = async () => ({ ok: false, error: 'UNEXPECTED_MESSAGE' }) } = {}) {
+function makePopup({ popupView = null, uiLanguage = 'zh-CN', preference, storageData = {},
+  storageSet = async () => {}, storageGet = null, confirm = () => true,
+  sendMessage = async () => ({ ok: false, error: 'UNEXPECTED_MESSAGE' }) } = {}) {
   const elements = new Map(ids.map(id => [id, {
     id, textContent: '', disabled: true,
     hidden: ['#account-card', '#progress-card', '#counts', '#first-run-guide', '#update-full', '#stop',
       '#export-actions', '#record-tools'].includes(id),
     listeners: new Map(),
     addEventListener(type, handler) { this.listeners.set(type, handler); },
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    getAttribute(name) { return this.attributes[name] ?? null; },
   }]));
+  const staticElements = [];
+  for (const tag of html.matchAll(/<[a-z][a-z0-9-]*\b([^>]*)>/gu)) {
+    const attributes = Object.fromEntries([...tag[1].matchAll(/([a-z0-9-]+)="([^"]*)"/gu)]
+      .map(match => [match[1], match[2]]));
+    if (!Object.keys(attributes).some(name => name.startsWith('data-i18n'))) continue;
+    const element = elements.get(`#${attributes.id}`) || {
+      textContent: '', attributes: {},
+      setAttribute(name, value) { this.attributes[name] = value; },
+      getAttribute(name) { return this.attributes[name] ?? null; },
+    };
+    Object.assign(element.attributes, attributes);
+    staticElements.push(element);
+  }
   const timers = new Map();
   const runtimeMessages = [];
   const storageKeys = [];
+  const storageWrites = [];
+  if (preference !== undefined) storageData[LANGUAGE_KEY] = preference;
   let nextTimer = 0;
   const context = {
+    ...popupI18n,
     document: {
+      documentElement: { lang: 'zh-CN' },
+      title: '',
       querySelector: selector => elements.get(selector) || null,
       querySelectorAll: selector => selector === '.actions button'
         ? ['#update-incremental', '#update-full', '#stop', '#export-latest', '#export-all', '#backup']
-          .map(id => elements.get(id)) : [],
+          .map(id => elements.get(id)) : staticElements.filter(element =>
+            Object.hasOwn(element.attributes, selector.slice(1, -1))),
       createElement: () => ({ append() {}, click() {}, remove() {} }),
       body: { append() {} },
     },
-    window: { confirm: () => true, addEventListener() {} },
+    window: { confirm, addEventListener() {} },
     chrome: {
+      i18n: { getUILanguage: () => uiLanguage },
       tabs: { query: async () => [{ id: 7 }] },
       runtime: { async sendMessage(message) { runtimeMessages.push(message); return sendMessage(message); } },
       storage: { local: { async get(key) {
-        storageKeys.push(key);
-        return { [POPUP_VIEW_KEY]: popupView };
+        storageKeys.push(Array.isArray(key) ? [...key] : key);
+        return storageGet ? storageGet(key) : { ...storageData, [POPUP_VIEW_KEY]: popupView };
+      }, async set(record) {
+        const value = Object.fromEntries(Object.entries(record));
+        storageWrites.push(value);
+        await storageSet(value);
+        Object.assign(storageData, value);
       } } },
     },
     setTimeout(fn, delay) {
@@ -50,7 +85,11 @@ function makePopup({ popupView = null, sendMessage = async () => ({ ok: false, e
   };
   vm.runInNewContext(source, context, { filename: 'popup.js' });
   return {
-    elements, timers, runtimeMessages, storageKeys,
+    elements, timers, runtimeMessages, storageKeys, storageWrites, storageData, document: context.document,
+    async selectLanguage(value) {
+      elements.get('#language-select').value = value;
+      await elements.get('#language-select').listeners.get('change')();
+    },
     async settle() { await new Promise(resolve => setImmediate(resolve)); },
     async fireTimer(timer) { timers.delete(timer.id); return timer.fn(); },
   };
@@ -75,7 +114,7 @@ test('opening and manually refreshing reads only the lightweight local view; pol
   });
   await popup.settle();
 
-  assert.deepEqual(popup.storageKeys, [POPUP_VIEW_KEY]);
+  assert.deepEqual(popup.storageKeys, [initialStorageKeys]);
   assert.equal(popup.elements.get('#account').textContent, 'accountA');
   assert.match(popup.elements.get('#status').textContent, /本地记录缓存/);
   assert.equal(popup.elements.get('#contact-count').textContent, '2');
@@ -95,7 +134,7 @@ test('opening and manually refreshing reads only the lightweight local view; pol
   assert.equal(popup.runtimeMessages[0].expectedAccountUid, 'accountA');
 
   await popup.elements.get('#refresh').listeners.get('click')();
-  assert.deepEqual(popup.storageKeys, [POPUP_VIEW_KEY, POPUP_VIEW_KEY]);
+  assert.deepEqual(popup.storageKeys, [initialStorageKeys, POPUP_VIEW_KEY]);
   assert.equal(popup.runtimeMessages.length, 1, 'manual refresh must reread local cache only');
 });
 
@@ -348,7 +387,7 @@ test('an unsupported page keeps its error state and opening the popup still only
   assert.equal(popup.elements.get('#first-run-guide').hidden, true);
   assert.match(popup.elements.get('#status').textContent, /打开 BOSS 直聘沟通页/);
   assert.deepEqual(popup.runtimeMessages.map(message => message.type), ['GET_STATE']);
-  assert.deepEqual(popup.storageKeys, [POPUP_VIEW_KEY]);
+  assert.deepEqual(popup.storageKeys, [initialStorageKeys]);
 });
 
 test('a view refresh during a pending first start clears its temporary label and keeps the newer account view', async () => {
@@ -422,4 +461,165 @@ test('a cached UID is only a preview: one start click follows the fresh account 
   assert.match(popup.elements.get('#status').textContent, /已按当前登录账号 accountB 开始采集/);
   assert.equal(popup.elements.get('#update-incremental').disabled, true);
   assert.equal(popup.runtimeMessages.length, 1, 'the same click starts using the freshly confirmed account');
+});
+
+test('browser language is adapted only when no supported local preference exists', async () => {
+  const cases = [
+    { uiLanguage: 'en-US', expected: 'en', button: 'Start first collection' },
+    { uiLanguage: 'zh-TW', expected: 'zh-CN', button: '开始首次采集' },
+    { uiLanguage: 'fr-FR', expected: 'en', button: 'Start first collection' },
+    { uiLanguage: '', expected: 'en', button: 'Start first collection' },
+    { uiLanguage: 'en-US', preference: 'zh-CN', expected: 'zh-CN', button: '开始首次采集' },
+    { uiLanguage: 'zh-CN', preference: 'en', expected: 'en', button: 'Start first collection' },
+    { uiLanguage: 'en-US', preference: 'invalid', expected: 'en', button: 'Start first collection' },
+  ];
+  for (const options of cases) {
+    const popup = makePopup({ ...options, popupView: view('accountA', 0, 0) });
+    await popup.settle();
+    assert.equal(popup.document.documentElement.lang, options.expected);
+    assert.equal(popup.document.title, popupI18n.translate(options.expected, 'app.title'));
+    assert.equal(popup.elements.get('#language-select').value, options.expected);
+    assert.equal(popup.elements.get('#update-incremental').textContent, options.button);
+    assert.deepEqual(popup.storageKeys, [initialStorageKeys]);
+    assert.equal(popup.storageWrites.length, 0, 'automatic adaptation does not persist or rewrite a preference');
+    assert.equal(popup.runtimeMessages.length, 0);
+  }
+});
+
+test('language changes redraw running progress and cached dates without any collection or view lookup', async () => {
+  const progress = { kind: 'api_v1', status: 'running', active: true, runId: 'running-language',
+    completed: 3, discovered: 8, refreshedCount: 2, skippedUnchangedCount: 1, failed: 0, newMessageCount: 7 };
+  const popup = makePopup({ popupView: view('accountA', 3, 12, progress) });
+  await popup.settle();
+  const timerIds = [...popup.timers.keys()];
+  await popup.selectLanguage('en');
+  assert.equal(popup.document.documentElement.lang, 'en');
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Updating…');
+  assert.equal(popup.elements.get('#update-incremental').disabled, true);
+  assert.equal(popup.elements.get('#stop').textContent, 'Stop collection');
+  assert.equal(popup.elements.get('#stop').hidden, false);
+  assert.equal(popup.elements.get('#stop').disabled, false);
+  assert.equal(popup.elements.get('#account').textContent, 'accountA');
+  assert.equal(popup.elements.get('#contact-count').textContent, '3');
+  assert.equal(popup.elements.get('#message-count').textContent, '12');
+  assert.match(popup.elements.get('#progress').textContent, /Updating · Checked 3\/8 · Updated 2 · Skipped 1 · Failed 0 · New messages 7/u);
+  assert.equal(popup.elements.get('#status').textContent,
+    popupI18n.translate('en', 'status.cachedAt', { date: popupI18n.formatDate('en', '2026-10-17T12:00:00.000Z') }));
+  assert.deepEqual(popup.storageWrites, [{ [LANGUAGE_KEY]: 'en' }]);
+  assert.deepEqual(popup.storageKeys, [initialStorageKeys]);
+  assert.equal(popup.runtimeMessages.length, 0);
+  assert.deepEqual([...popup.timers.keys()], timerIds, 'language switch preserves the existing polling schedule');
+
+  await popup.selectLanguage('zh-CN');
+  assert.match(popup.elements.get('#progress').textContent, /正在更新 · 检查 3\/8/u);
+  assert.equal(popup.elements.get('#status').textContent,
+    popupI18n.translate('zh-CN', 'status.cachedAt', { date: popupI18n.formatDate('zh-CN', '2026-10-17T12:00:00.000Z') }));
+});
+
+test('known diagnostic codes translate retained errors; unknown technical diagnostics remain unchanged', async () => {
+  const failed = { status: 'failed', active: false, errorCode: 'ARCHIVE_DECRYPT_FAILED',
+    errorDetails: '此前保存的中文诊断内容', completed: 3, discovered: 8 };
+  const popup = makePopup({ popupView: view('accountA', 3, 12, failed) });
+  await popup.settle();
+  await popup.selectLanguage('en');
+  assert.match(popup.elements.get('#status').textContent, /could not be decrypted/u);
+  assert.doesNotMatch(popup.elements.get('#progress').textContent, /此前保存/u);
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Resume collection');
+  assert.equal(popup.elements.get('#update-incremental').disabled, false);
+  assert.equal(popup.runtimeMessages.length, 0);
+
+  const unknown = makePopup({ uiLanguage: 'en', popupView: view('accountA', 1, 1,
+    { status: 'interrupted', active: false, errorCode: 'UNKNOWN_DIAGNOSTIC', errorDetails: 'HTTP 503: diagnostic' }) });
+  await unknown.settle();
+  assert.equal(unknown.elements.get('#status').textContent, 'HTTP 503: diagnostic');
+  await unknown.selectLanguage('zh-CN');
+  assert.equal(unknown.elements.get('#status').textContent, 'HTTP 503: diagnostic');
+});
+
+test('language selection while START is pending preserves its lock, failure and first-start retry', async () => {
+  let finishStart;
+  const popup = makePopup({ popupView: view('accountA', 0, 0),
+    sendMessage: () => new Promise(resolve => { finishStart = resolve; }) });
+  await popup.settle();
+  const start = popup.elements.get('#update-incremental').listeners.get('click')();
+  await popup.settle();
+  await popup.selectLanguage('en');
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Starting first collection…');
+  assert.equal(popup.elements.get('#update-incremental').disabled, true);
+  assert.equal(popup.elements.get('#status').textContent, 'Starting first collection…');
+  assert.equal(popup.runtimeMessages.length, 1);
+  finishStart({ ok: false, error: 'UNSUPPORTED_PAGE' });
+  await start;
+  assert.equal(popup.elements.get('#status').textContent, 'Open the BOSS chat page before using the extension.');
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Start first collection');
+  assert.equal(popup.elements.get('#update-incremental').disabled, false);
+  await popup.selectLanguage('zh-CN');
+  assert.equal(popup.elements.get('#status').textContent, '请打开 BOSS 直聘沟通页后再使用扩展。');
+  assert.equal(popup.elements.get('#update-incremental').textContent, '开始首次采集');
+  assert.equal(popup.runtimeMessages.length, 1, 'language changes do not retry START');
+});
+
+test('language changes do not revive an old account response after an epoch change', async () => {
+  let finishStart;
+  const localView = view('accountA', 0, 0);
+  const popup = makePopup({ popupView: localView,
+    sendMessage: () => new Promise(resolve => { finishStart = resolve; }) });
+  await popup.settle();
+  const start = popup.elements.get('#update-incremental').listeners.get('click')();
+  await popup.settle();
+  localView.accountUid = 'accountB';
+  localView.summary = { contactCount: 2, messageCount: 9 };
+  localView.hasCollectionHistory = true;
+  await popup.elements.get('#refresh').listeners.get('click')();
+  await popup.selectLanguage('en');
+  finishStart({ ok: true, accountUid: 'accountA', summary: { contactCount: 0, messageCount: 0 },
+    progress: { status: 'running', active: true } });
+  await start;
+  assert.equal(popup.elements.get('#account').textContent, 'accountB');
+  assert.equal(popup.elements.get('#message-count').textContent, '9');
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Update changed conversations');
+  assert.equal(popup.runtimeMessages.length, 1);
+});
+
+test('preference writes are local, survive reopening and account clearing, and failures preserve the main status', async () => {
+  const storageData = {};
+  const popup = makePopup({ popupView: view('accountA', 2, 9), storageData,
+    sendMessage: async message => {
+      assert.equal(message.type, 'CLEAR_ACCOUNT');
+      return { ok: true, cleared: true, accountUid: 'accountA', summary: { contactCount: 0, messageCount: 0 },
+        progress: null, hasCollectionHistory: false };
+    } });
+  await popup.settle();
+  await popup.selectLanguage('en');
+  await popup.elements.get('#clear').listeners.get('click')();
+  await popup.settle();
+  assert.equal(storageData[LANGUAGE_KEY], 'en');
+  assert.deepEqual(popup.storageWrites, [{ [LANGUAGE_KEY]: 'en' }], 'account clearing never writes language preferences');
+  const reopened = makePopup({ popupView: view('accountA', 0, 0), storageData, uiLanguage: 'zh-CN' });
+  await reopened.settle();
+  assert.equal(reopened.document.documentElement.lang, 'en');
+
+  const broken = makePopup({ popupView: view('accountA', 2, 9, {
+    status: 'interrupted', active: false, errorCode: 'BULK_STORAGE_TIMEOUT',
+  }), storageSet: async () => { throw new Error('synthetic storage failure'); } });
+  await broken.settle();
+  await broken.selectLanguage('en');
+  assert.equal(broken.document.documentElement.lang, 'en');
+  assert.equal(broken.elements.get('#status').textContent, popupI18n.translate('en', 'error.BULK_STORAGE_TIMEOUT'));
+  assert.equal(broken.elements.get('#language-status').hidden, false);
+  assert.match(broken.elements.get('#language-status').textContent, /preference could not be saved/u);
+  assert.equal(broken.storageWrites.length, 1, 'failed language persistence is not retried');
+  assert.equal(broken.runtimeMessages.length, 0);
+});
+
+test('a late preference read cannot overwrite a language selected in this popup', async () => {
+  let finishRead;
+  const popup = makePopup({ uiLanguage: 'zh-CN', storageGet: () => new Promise(resolve => { finishRead = resolve; }) });
+  await popup.selectLanguage('en');
+  finishRead({ [POPUP_VIEW_KEY]: view('accountA', 2, 9), [LANGUAGE_KEY]: 'zh-CN' });
+  await popup.settle();
+  assert.equal(popup.document.documentElement.lang, 'en');
+  assert.equal(popup.elements.get('#account').textContent, 'accountA');
+  assert.equal(popup.elements.get('#update-incremental').textContent, 'Update changed conversations');
+  assert.equal(popup.runtimeMessages.length, 0);
 });

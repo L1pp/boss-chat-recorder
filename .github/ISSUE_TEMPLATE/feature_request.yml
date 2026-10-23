@@ -1,29 +1,29 @@
-name: 功能建议
-description: 说明一个具体问题和期望行为
-title: "[建议] "
+name: Feature request / 功能建议
+description: Describe a concrete problem and desired behavior. 可使用中文填写。
+title: "[Feature] "
 body:
   - type: textarea
     id: problem
     attributes:
-      label: 遇到的问题
-      description: 请描述实际场景和当前替代办法。
+      label: Problem / 遇到的问题
+      description: Describe the actual situation and current workaround.
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: 期望行为
-      description: 用具体例子说明你希望如何工作；可使用合成数据。
+      label: Desired behavior / 期望行为
+      description: Explain with a concrete example; use synthetic data if needed. 示例请使用合成数据。
     validations:
       required: true
   - type: textarea
     id: considerations
     attributes:
-      label: 其他背景
-      description: 可补充影响范围或相关限制，不要包含个人或账号数据。
+      label: Context and constraints / 背景与限制
+      description: Include relevant scope or constraints without personal or account data.
     validations:
       required: false
   - type: markdown
     attributes:
       value: >-
-        项目由个人维护，建议会按项目范围和维护时间评估，不承诺实现或兼容特定平台。请勿附上真实聊天、UID、联系方式、验证码、Cookie、配对令牌或完整真实导出。
+        This individually maintained project evaluates proposals by scope and available time, without feature or platform-support commitments. Do not attach real chats, UIDs, contacts, codes, Cookies, pairing tokens, or complete real exports. 项目不承诺实现建议；请勿附上真实聊天、个人账号数据或凭据。

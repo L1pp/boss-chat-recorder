@@ -232,9 +232,10 @@ export function createExtensionMessageHandler(chromeApi = globalThis.chrome, {
         : latestProgress(partition);
       const required = verificationRequiredFor(partition, accountUid, progress);
       await diagnosticOperation('badge.setText', () =>
-        chromeApi.action.setBadgeText({ tabId, text: required ? '验' : '' }));
+        chromeApi.action.setBadgeText({ tabId, text: required ? '!' : '' }));
       if (chromeApi.action.setTitle) {
-        const title = required ? 'BOSS 要求人工验证，采集已暂停。' :
+        const title = required ? (chromeApi.i18n?.getMessage('verificationRequired') ||
+          'BOSS 要求人工验证 · Manual verification required') :
           (chromeApi.runtime.getManifest?.().name || 'BOSS 沟通记录');
         await diagnosticOperation('badge.setTitle', () => chromeApi.action.setTitle({ tabId, title }));
       }

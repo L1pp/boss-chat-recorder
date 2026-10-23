@@ -1,25 +1,27 @@
-# 参与贡献
+# Contributing
 
-感谢你愿意改进这个项目。仓库采用 MIT 许可证，贡献也按 MIT 许可证提供。
+[English](CONTRIBUTING.md) | [简体中文](CONTRIBUTING_CN.md)
 
-项目目前由个人维护，问题和合并请求会在维护者有时间时查看；不承诺响应时限、功能接受或平台兼容范围。请把提议聚焦在可复现的问题、清晰的改动和合成数据上。
+Thank you for helping improve BOSS Chat Recorder. This repository uses the MIT License, and contributions are provided under the same license. Chinese and English issues and pull requests are welcome.
 
-## 本地开发与检查
+The project is maintained by an individual. Reports and pull requests are reviewed as time allows; there is no response-time, feature-acceptance, or platform-support commitment. Keep proposals focused on reproducible problems, clear changes, and synthetic data.
 
-需要 Node.js 24 或更新版本。原生单元测试使用 Node.js 内置测试运行器：
+## Local development and checks
+
+Use Node.js 24 or later. Unit tests use Node's built-in test runner:
 
 ```sh
 npm test
 npm run check
 ```
 
-测试覆盖率报告不设通过阈值：
+Coverage is reported without a passing percentage threshold:
 
 ```sh
 npm run test:coverage
 ```
 
-真实浏览器测试使用 Playwright 和合成数据。首次安装开发依赖并下载 Chromium 后运行：
+For real browser tests with synthetic data, install the development tools and Chromium first:
 
 ```sh
 npm ci --ignore-scripts
@@ -27,16 +29,21 @@ npm run test:browser:install
 npm run test:browser
 ```
 
-Playwright 仅用于开发测试，不进入扩展运行包，也不为扩展增加权限。GitHub Actions 分别运行 Linux、Windows 离线检查和 Linux Chromium 测试。测试不登录招聘平台、不读取真实聊天，也不发送消息或投递简历。
+Playwright is a development dependency. It is not included in the extension runtime package and adds no extension permissions. GitHub Actions runs Linux and Windows offline checks plus isolated Linux Chromium tests. Tests do not log in to BOSS, read real chats, send messages, or submit applications. See [testing](docs/TESTING.md) / [测试说明](docs/TESTING_CN.md).
 
-## 提交问题或改动
+## Issues and pull requests
 
-- 报告问题时写清扩展版本、操作步骤、预期结果和实际结果。复现示例请使用合成数据；只提供已经脱敏的错误码或必要日志片段。
-- 功能建议请说明遇到的具体问题、期望行为和现有替代办法。项目不承诺实现某个平台兼容性或特定功能。
-- 合并请求请说明行为变化和已运行的检查。改动采集、权限、账号分区、加密或导出行为时，请同时补充有针对性的离线测试和隐私说明。
-- 不要在 issue、合并请求、截图或附件中粘贴真实聊天、UID、招聘方联系方式、邮箱验证码、Cookie、配对令牌、密钥或完整真实导出。安全漏洞请按 [安全问题报告说明](SECURITY.md) 私下报告，不要公开开 issue。
-- 请勿在本项目的自动检查或演示中加入真实账号访问、消息发送、简历投递或绕过平台验证的步骤。
+- For a bug, include the extension version, reproduction steps, expected behavior, and actual behavior. Use synthetic fixtures and only necessary, redacted error codes or log excerpts.
+- For a feature, describe the concrete problem, desired behavior, and existing workaround. A proposal does not establish a commitment to implement a feature or support a platform.
+- For a pull request, explain the behavior change and checks you ran. Changes to collection, account separation, permissions, encryption, or exports should include focused offline tests and appropriate privacy documentation.
+- Keep each PR focused. Open it from a branch, let configured CI and AI reviews run when their conditions apply, and address relevant feedback before merge. The final store package is built by GitHub Actions from merged `main`; local and PR CI ZIPs are previews. Publishing is a separate manual operation.
+- Do not put real chats, account UIDs, recruiter contact information, verification codes, Cookies, pairing tokens, keys, or complete real exports in issues, PRs, screenshots, or attachments. Report vulnerabilities privately under [SECURITY.md](SECURITY.md) / [安全报告](SECURITY_CN.md).
+- Do not add access to real accounts, message sending, resume submission, or platform-verification bypass to automated checks or demos.
 
-提交合并请求不代表会被接受。维护者可以要求调整、暂缓或关闭不符合项目范围的提议。
+Submitting a PR does not guarantee acceptance. A maintainer may request changes, defer a proposal, or close work outside the project's scope.
 
-Codex 与 Greptile 的自动审阅配置和费用边界见 [PR AI 审阅说明](docs/AI_REVIEW.md)。AI 意见由维护者核实，不自动批准、合并或发布。
+## Languages
+
+English is the default for developer documentation, with linked Chinese versions. Preserve Chinese documentation rather than replacing it. The user interface serves a mainly Chinese market: support Chinese and English without translating saved message content. Keep both interface translations and language-specific documents consistent when behavior changes. BOSS names and Chinese examples may remain in Chinese where they help explain the product.
+
+Configured Codex, Greptile, and owner-enabled Copilot reviews are additional feedback, not automatic approval or publishing. Account settings and usage depend on the service; see [AI review](docs/AI_REVIEW.md) / [AI 审阅说明](docs/AI_REVIEW_CN.md).
