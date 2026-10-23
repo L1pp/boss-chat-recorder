@@ -13,8 +13,13 @@ on:
           - status
           - upload
           - publish
+      build_run_id:
+        description: Reuse the ZIP from a successful main release run; leave empty to build and test once.
+        type: string
+        required: false
+        default: ''
       github_release:
-        description: Also create a GitHub Release with the built ZIP (ignored for status).
+        description: Also create a GitHub Release with the selected ZIP (ignored for status).
         type: boolean
         required: false
         default: false
@@ -22,14 +27,47 @@ on:
 permissions: {}
 
 jobs:
-  package:
-    if: ${{ inputs.operation == 'build' || inputs.operation == 'upload' || inputs.operation == 'publish' }}
+  prepare:
+    if: ${{ inputs.operation != 'status' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      needs_build: ${{ steps.source.outputs.needs_build }}
+      version: ${{ steps.source.outputs.version }}
+      run_id: ${{ steps.source.outputs.run_id }}
+      source_sha: ${{ steps.source.outputs.source_sha }}
+      artifact_name: ${{ steps.source.outputs.artifact_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Select a new build or a tested main release artifact
+        id: source
+        env:
+          RELEASE_OPERATION: ${{ inputs.operation }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release-artifact.mjs
+
+  package:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.needs_build == 'true' }}
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 15
     permissions:
       contents: read
-    outputs:
-      version: ${{ steps.meta.outputs.version }}
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -42,9 +80,6 @@ jobs:
 
       - name: Install browser test dependencies
         run: npm ci --ignore-scripts
-
-      - name: Install Chromium
-        run: npm run test:browser:install -- --with-deps
 
       - name: Run offline tests
         run: npm test
@@ -66,29 +101,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Read extension version
-        id: meta
-        shell: bash
-        run: |
-          VERSION="$(node -p "require('./extension-tracker/manifest.json').version")"
-          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Package the allowlisted Chrome extension files
         run: node scripts/package-extension.mjs --output "$RUNNER_TEMP/boss-chat-recorder.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: boss-chat-recorder-${{ steps.meta.outputs.version }}
+          name: ${{ needs.prepare.outputs.artifact_name }}
           path: ${{ runner.temp }}/boss-chat-recorder.zip
           if-no-files-found: error
           retention-days: 14
 
   chrome-web-store:
-    needs: package
+    needs:
+      - prepare
+      - package
     if: >-
-      ${{ !cancelled() && (
+      ${{ always() && !cancelled() && (
         inputs.operation == 'status' ||
-        ((inputs.operation == 'upload' || inputs.operation == 'publish') && needs.package.result == 'success')
+        (github.ref == 'refs/heads/main' &&
+          (inputs.operation == 'upload' || inputs.operation == 'publish') &&
+          needs.prepare.result == 'success' && (
+            (needs.prepare.outputs.needs_build == 'true' && needs.package.result == 'success') ||
+            (needs.prepare.outputs.needs_build == 'false' && needs.package.result == 'skipped')
+          ))
       ) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -97,6 +132,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -104,6 +140,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Download the selected original package
+        if: ${{ inputs.operation == 'upload' || inputs.operation == 'publish' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.prepare.outputs.artifact_name }}
+          path: ${{ runner.temp }}
+          run-id: ${{ needs.prepare.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
 
       - uses: google-github-actions/auth@v3
         id: google-auth
@@ -116,13 +162,6 @@ jobs:
           create_credentials_file: false
           export_environment_variables: false
 
-      - name: Download the package built in this workflow
-        if: ${{ inputs.operation == 'upload' || inputs.operation == 'publish' }}
-        uses: actions/download-artifact@v4
-        with:
-          name: boss-chat-recorder-${{ needs.package.outputs.version }}
-          path: ${{ runner.temp }}
-
       - name: Check Chrome Web Store item status
         if: ${{ inputs.operation == 'status' }}
         env:
@@ -132,6 +171,7 @@ jobs:
         run: node scripts/chrome-webstore.mjs status
 
       - name: Upload package to Chrome Web Store
+        id: upload
         if: ${{ inputs.operation == 'upload' || inputs.operation == 'publish' }}
         env:
           CWS_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
@@ -140,7 +180,7 @@ jobs:
         run: node scripts/chrome-webstore.mjs upload --zip "$RUNNER_TEMP/boss-chat-recorder.zip"
 
       - name: Submit the uploaded item for review
-        if: ${{ inputs.operation == 'publish' }}
+        if: ${{ inputs.operation == 'publish' && steps.upload.outcome == 'success' }}
         env:
           CWS_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
           CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
@@ -149,30 +189,38 @@ jobs:
 
   github-release:
     needs:
+      - prepare
       - package
       - chrome-web-store
     if: >-
-      ${{ !cancelled() && inputs.github_release && inputs.operation != 'status' &&
-        needs.package.result == 'success' &&
-        (inputs.operation == 'build' || needs.chrome-web-store.result == 'success') }}
+      ${{ always() && !cancelled() && github.ref == 'refs/heads/main' &&
+        inputs.github_release && inputs.operation != 'status' && needs.prepare.result == 'success' && (
+          (needs.prepare.outputs.needs_build == 'true' && needs.package.result == 'success') ||
+          (needs.prepare.outputs.needs_build == 'false' && needs.package.result == 'skipped')
+        ) && (inputs.operation == 'build' || needs.chrome-web-store.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
-          name: boss-chat-recorder-${{ needs.package.outputs.version }}
+          name: ${{ needs.prepare.outputs.artifact_name }}
           path: ${{ runner.temp }}
+          run-id: ${{ needs.prepare.outputs.run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
 
       - name: Create GitHub Release with the extension ZIP
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ needs.package.outputs.version }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
         run: >-
           gh release create "v${RELEASE_VERSION}" "$RUNNER_TEMP/boss-chat-recorder.zip"
-          --target "$GITHUB_SHA"
+          --target "$RELEASE_SOURCE_SHA"
           --title "BOSS Chat Recorder v${RELEASE_VERSION}"
-          --notes "Public Chrome extension package built from commit ${GITHUB_SHA}."
+          --notes "Public Chrome extension package built from commit ${RELEASE_SOURCE_SHA}."

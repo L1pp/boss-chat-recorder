@@ -10,16 +10,26 @@ Open **Actions → Build and publish Chrome Web Store extension → Run workflow
 
 | `operation` | Effect |
 | --- | --- |
-| `build` (default) | Build, run offline/browser tests and public checks, and produce a ZIP without connecting to Google |
+| `build` (default) | Build, run offline/browser tests and public checks, and produce a ZIP without connecting to Google; or select an existing tested ZIP with `build_run_id` |
 | `status` | Read the existing store item's status using a short-lived token; no build, upload, or submission |
-| `upload` | Build and upload a new draft, waiting for Google's acknowledgement; no review submission |
-| `publish` | Build, upload, and submit for normal review; approval publishes under the item's existing visibility |
+| `upload` | Upload the selected ZIP as a draft, waiting for Google's acknowledgement; no review submission |
+| `publish` | Upload the selected ZIP and submit for normal review; approval publishes under the item's existing visibility |
 
-`github_release` defaults to `false`. When enabled, successful build/store work creates GitHub Release `v<manifest.version>` with the same ZIP. `status` ignores it; an existing release name fails rather than being overwritten. CI and `build` with `github_release=false` create neither a GitHub Release nor a store submission.
+`build_run_id` is optional. Leave it blank to build and test once in this run. Set it to the original successful `main` release-workflow run ID to download its retained `boss-chat-recorder-<version>` artifact instead. Reuse skips the package job, dependency installation, and tests; it does not regenerate or modify the ZIP. PR CI artifacts, failed runs, and expired artifacts are not release sources. `status` ignores this input.
 
-For initial setup, run `build` to inspect the package, then `status` after configuring Google identity. For updates, change the public source and version fields in `package.json` and `extension-tracker/manifest.json`, complete the PR, and merge before dispatch. Choose `upload` for an authorized draft update or `publish` for an authorized review submission. Google rejects duplicate versions; the workflow does not increment or commit them. A separate development build need not match the store version.
+For a staged release:
 
-Upload/submission jobs share an extension-specific concurrency group; status queries do not occupy it. Actions `publish` uploads its own run's code, and a failed or duplicate-version upload prevents submission of another draft.
+1. Run `build` on `main`, optionally with `github_release=true`, and retain its run ID.
+2. Run `upload` with that `build_run_id`, then edit and save any store listing changes.
+3. Run `publish` with the same ID. It uploads the same tested ZIP before submitting, so it does not accidentally submit another draft.
+
+A one-step update can still use `publish` with an empty ID: one build feeds the upload and submission. Store writes and GitHub Release creation run only on `main`; branch builds are previews.
+
+`github_release` defaults to `false`. When enabled, successful build/store work creates GitHub Release `v<selected-version>` with the same ZIP, using the original build's commit for a new tag even when this workflow runs from a later commit. Existing tags retain their target. `status` ignores it; an existing release name fails rather than being overwritten. CI and `build` with `github_release=false` create neither a GitHub Release nor a store submission.
+
+For initial setup, run `build` to inspect the package, then `status` after configuring Google identity. For updates, change the public source and version fields in `package.json` and `extension-tracker/manifest.json`, complete the PR, and merge before dispatch. Choose `upload` for an authorized draft update or `publish` for an authorized review submission. A new published version must increase the version fields; the workflow does not increment or commit them. A separate development build need not match the store version.
+
+Upload/submission jobs share an extension-specific concurrency group; status queries do not occupy it. Actions `publish` uploads the selected tested ZIP, and a failed upload prevents submission of another draft.
 
 Submission acknowledgement is not public availability. Review results, listing text, artwork, privacy disclosures, visibility, and account settings remain in the store dashboard; this workflow does not edit them or bypass review.
 
@@ -27,7 +37,7 @@ Submission acknowledgement is not public availability. Review results, listing t
 
 The ZIP contains only runtime files listed in `scripts/package-extension.mjs`, with `manifest.json` at its root. Source-only modules, tests, demos, store artwork, credentials, debug files, and personal data are excluded.
 
-Actions ZIPs are retained for 14 days. Push/PR checks also produce `boss-chat-recorder-Linux-ci` and `boss-chat-recorder-Windows-ci` previews without requesting Google tokens. GitHub Release attachments remain with their release.
+Actions ZIPs are retained for 14 days; after expiry, create a fresh tested build. Main-push/PR checks also produce `boss-chat-recorder-Linux-ci` and `boss-chat-recorder-Windows-ci` previews without requesting Google tokens. GitHub Release attachments remain with their release.
 
 For a local preview, follow the build/check steps in [testing](TESTING.md), then run:
 

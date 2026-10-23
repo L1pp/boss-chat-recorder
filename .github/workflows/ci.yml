@@ -1,5 +1,8 @@
 name: Automated tests
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 permissions:
   contents: read
 concurrency:
@@ -43,7 +46,11 @@ jobs:
   browser:
     name: Chromium synthetic regression
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     timeout-minutes: 20
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,8 +58,6 @@ jobs:
           node-version: '24'
       - name: Install test dependencies
         run: npm ci --ignore-scripts
-      - name: Install Chromium
-        run: npm run test:browser:install -- --with-deps
       - name: Build public extension
         run: npm run build
       - name: Run browser regression with synthetic profiles

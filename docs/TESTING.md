@@ -53,7 +53,7 @@ npm run build
 npm run test:browser
 ```
 
-On Linux, install missing system libraries with `npm run test:browser:install -- --with-deps`. The wrappers use the project cache at `node_modules/.cache/boss-browser/`, without clearing shared Playwright caches. Profiles are new system-temporary directories. Playwright is a development dependency and is excluded from the extension ZIP.
+On Linux, install missing system libraries with `npm run test:browser:install -- --with-deps`. The wrappers respect an explicit `PLAYWRIGHT_BROWSERS_PATH`; otherwise they use the project cache at `node_modules/.cache/boss-browser/`, without clearing shared Playwright caches. Profiles are new system-temporary directories. Playwright is a development dependency and is excluded from the extension ZIP.
 
 The suite loads the extension from the public package list and seeds two synthetic accounts through production storage modules. It checks:
 
@@ -69,9 +69,9 @@ External network is blocked and collection is not started. Cleanup removes only 
 
 ## CI and acceptance limits
 
-Pushes and PRs run Node 24 tests, coverage, public checks, and ZIP packaging on Ubuntu and Windows, plus native Chromium regression on Ubuntu. Coverage/browser diagnostics are retained for 7 days; runtime ZIPs for 14 days. CI needs no Google or website credentials.
+Pushes to `main` and PRs run Node 24 tests, coverage, public checks, and ZIP packaging on Ubuntu and Windows, plus native Chromium regression on Ubuntu. Feature-branch pushes do not start a second copy of the PR checks. The browser job uses a version-matched Playwright container with preinstalled browsers and system libraries, while `npm ci` installs the project test package. Required check names and test coverage remain the same. Coverage/browser diagnostics are retained for 7 days; runtime ZIPs for 14 days. CI needs no Google or website credentials.
 
-The manual release build also runs Chromium regression. Store behavior depends on the selected operation; see [releasing](RELEASING.md).
+A fresh manual release build also runs Chromium regression in that container. Upload/review operations can reuse its tested artifact without another build or browser installation. Store behavior depends on the selected operation; see [releasing](RELEASING.md).
 
 These checks do not establish:
 

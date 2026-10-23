@@ -6,7 +6,7 @@ Use only repository synthetic fixtures and new temporary browser profiles for te
 
 ## Change and release workflow
 
-Make public source changes through a GitHub branch and formal PR. Let configured CI and automatic AI reviews run when their trigger conditions apply, address relevant findings, and merge the PR before preparing a store package. The final package comes from GitHub Actions run on merged `main`; local ZIPs and PR CI artifacts are for preview and checks only. After merge, use the manual release workflow for `build`, `status`, `upload`, or `publish` as appropriate. `publish` uploads and submits the package for review.
+Make public source changes through a GitHub branch and formal PR. Let configured CI and automatic AI reviews run when their trigger conditions apply, address relevant findings, and merge the PR before preparing a store package. The final package comes from GitHub Actions run on merged `main`; local ZIPs and PR CI artifacts are for preview and checks only. After merge, use the manual release workflow for `build`, `status`, `upload`, or `publish` as appropriate. A successful main release build can be reused with `build_run_id`; upload and submission then use its original tested ZIP without rebuilding. `publish` uploads that selected ZIP and submits it for review.
 
 If Codex reports that an environment is needed, complete the repository-specific environment association or setup described by the [official environment guide](https://learn.chatgpt.com/docs/environments/cloud-environment) and [environment settings](https://chatgpt.com/codex/settings/environments). An enabled review toggle alone does not establish that an environment is ready; do not assume every account or repository has the same environment requirement.
 

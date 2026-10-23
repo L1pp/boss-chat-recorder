@@ -53,7 +53,7 @@ npm run build
 npm run test:browser
 ```
 
-Linux 缺少系统库时使用 `npm run test:browser:install -- --with-deps`。包装器使用项目缓存 `node_modules/.cache/boss-browser/`，不清理共享 Playwright 缓存；profile 新建于系统临时目录。Playwright 仅为开发依赖，不进入扩展 ZIP。
+Linux 缺少系统库时使用 `npm run test:browser:install -- --with-deps`。包装器优先使用显式设置的 `PLAYWRIGHT_BROWSERS_PATH`，否则使用项目缓存 `node_modules/.cache/boss-browser/`，不清理共享 Playwright 缓存；profile 新建于系统临时目录。Playwright 仅为开发依赖，不进入扩展 ZIP。
 
 测试按公开包清单加载扩展，通过生产存储模块播种两个合成账号，检查：
 
@@ -69,9 +69,9 @@ Linux 缺少系统库时使用 `npm run test:browser:install -- --with-deps`。�
 
 ## CI 与验收范围
 
-推送和 PR 在 Ubuntu、Windows 上运行 Node 24 测试、覆盖率、公开检查和 ZIP 打包，并在 Ubuntu 上运行原生 Chromium 回归。覆盖率及浏览器诊断保留 7 天，运行 ZIP 保留 14 天；CI 不需要 Google 或网站凭据。
+`main` 推送和 PR 在 Ubuntu、Windows 上运行 Node 24 测试、覆盖率、公开检查和 ZIP 打包，并在 Ubuntu 上运行原生 Chromium 回归。功能分支推送不会再额外启动一份 PR 检查。浏览器 job 使用与项目版本匹配的 Playwright 容器，直接使用预装浏览器和系统库，项目测试依赖仍由 `npm ci` 安装；必需检查名称和测试覆盖范围保持不变。覆盖率及浏览器诊断保留 7 天，运行 ZIP 保留 14 天；CI 不需要 Google 或网站凭据。
 
-手动发布的构建阶段也运行 Chromium 回归；商店行为由所选 operation 决定，见[发布说明](RELEASING.md)。
+手动发布的新构建阶段也在该容器中运行 Chromium 回归；后续上传和送审可复用已测试产物，无需再次构建或安装浏览器。商店行为由所选 operation 决定，见[发布说明](RELEASING.md)。
 
 这些检查不能证明：
 
