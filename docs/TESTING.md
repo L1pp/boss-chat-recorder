@@ -43,6 +43,7 @@ Tests load the extension using the public package list and seed two repository s
 - Protected archive values in native `chrome.storage.local` are ciphertext; the native IndexedDB AES-GCM CryptoKey is non-extractable; the popup displays local cache data.
 - The actual browser display of first-collection guidance, primary actions, and archive controls with empty and existing synthetic caches, including synthetic screenshots.
 - Real browser-language selection (Chinese, English, and an unsupported language falling back to English), immediate popup switching, locally remembered preference across a cold restart, and unchanged Chinese message exports. Node regressions additionally cover in-flight actions, recovery after errors, and late preference reads.
+- A `zh-TW` browser selects the Chinese UI and metadata. Rapid language choices are persisted before popup closure even when the first native storage acknowledgement is artificially delayed; the native writes themselves still commit. Node tests also assert translated accessibility attributes, the refresh tooltip, and the clear-confirmation text without deleting records.
 - Exports and clearing remain account-specific when two synthetic accounts reuse recruiter and message IDs.
 - A real worker stop and wake, followed by completely closing Chromium and reopening the same temporary profile, preserves readable/exportable records without reseeding.
 

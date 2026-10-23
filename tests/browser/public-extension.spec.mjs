@@ -182,7 +182,7 @@ test('an English browser starts in English and a manual choice survives popup an
   expect(harness.externalRequests).toEqual([]);
 });
 
-test('an unsupported browser language falls back to English on the first popup', async () => {
+test('non-Chinese browsers use English while a Traditional Chinese browser uses Chinese', async () => {
   await restartWithBrowserLocale('fr-FR');
   await cachePopupView(emptyPopupView());
   const page = await harness.openPopupPage();
@@ -191,6 +191,57 @@ test('an unsupported browser language falls back to English on the first popup',
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#language-select')).toHaveValue('en');
   await expect(page.locator('#update-incremental')).toHaveText('Start first collection');
+  await page.close();
+
+  await restartWithBrowserLocale('zh-TW');
+  const traditionalChinesePage = await harness.openPopupPage();
+  expect(await traditionalChinesePage.evaluate(() => chrome.i18n.getUILanguage())).toBe('zh-TW');
+  expect(await traditionalChinesePage.evaluate(() => chrome.runtime.getManifest().name))
+    .toBe('BOSS 沟通记录本地助手');
+  await expect(traditionalChinesePage.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(traditionalChinesePage.locator('#language-select')).toHaveValue('zh-CN');
+  await expect(traditionalChinesePage.locator('#update-incremental')).toHaveText('开始首次采集');
+  expect(harness.externalRequests).toEqual([]);
+});
+
+test('rapid language choices persist after popup close with the first native write acknowledgement artificially delayed', async ({}, testInfo) => {
+  await cachePopupView(emptyPopupView());
+  const page = await harness.openPopupPage();
+  await expect(page.locator('#language-select')).toHaveValue('zh-CN');
+  const witness = await page.evaluate(async key => {
+    const nativeSet = chrome.storage.local.set.bind(chrome.storage.local);
+    const acceptedWrites = [];
+    let firstNativeCommitted;
+    const committed = new Promise(resolve => { firstNativeCommitted = resolve; });
+    chrome.storage.local.set = items => {
+      const nativeResult = nativeSet(items);
+      if (!Object.hasOwn(items, key)) return nativeResult;
+      acceptedWrites.push(items[key]);
+      if (acceptedWrites.length !== 1) return nativeResult;
+      // The native write still commits. Only its returned acknowledgement is held, so this
+      // deterministically exercises close-before-callback without simulating failed disk IO.
+      nativeResult.then(firstNativeCommitted);
+      return nativeResult.then(() => new Promise(() => {}));
+    };
+    const selector = document.querySelector('#language-select');
+    for (const language of ['en', 'zh-CN']) {
+      selector.value = language;
+      selector.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    await committed;
+    return { acceptedWrites, displayedLanguage: document.documentElement.lang };
+  }, languagePreferenceKey);
+  await testInfo.attach('language-close-delayed-acknowledgement', {
+    body: Buffer.from(JSON.stringify(witness, null, 2)), contentType: 'application/json',
+  });
+  await page.close();
+  const worker = await getExtensionWorker(harness.context, harness.extensionId);
+  await expect.poll(() => worker.evaluate(async key => (await chrome.storage.local.get(key))[key],
+    languagePreferenceKey)).toBe('zh-CN');
+  const reopened = await harness.openPopupPage();
+  await expect(reopened.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(reopened.locator('#language-select')).toHaveValue('zh-CN');
+  expect(witness).toEqual({ acceptedWrites: ['en', 'zh-CN'], displayedLanguage: 'zh-CN' });
   expect(harness.externalRequests).toEqual([]);
 });
 

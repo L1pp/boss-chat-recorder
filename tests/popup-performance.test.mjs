@@ -696,3 +696,32 @@ test('known message-save and checkpoint failures explain the problem in both lan
     assert.equal(popup.runtimeMessages.length, 0);
   }
 });
+
+test('language switching updates accessibility labels, tooltip and the native clear confirmation', async () => {
+  const confirmations = [];
+  const popup = makePopup({ popupView: view('accountA', 2, 9), confirm: text => {
+    confirmations.push(text);
+    return false;
+  } });
+  await popup.settle();
+  for (const locale of ['en', 'zh-CN']) {
+    await popup.selectLanguage(locale);
+    assert.equal(popup.elements.get('#refresh').getAttribute('aria-label'),
+      locale === 'en' ? 'Refresh local record status' : '刷新本地记录状态');
+    assert.equal(popup.elements.get('#refresh').getAttribute('title'),
+      locale === 'en' ? 'Refresh local status' : '刷新本地状态');
+    const labels = popup.document.querySelectorAll('[data-i18n-aria-label]');
+    const expected = locale === 'en'
+      ? ['Local record counts for this account', 'First collection instructions', 'Collection actions', 'Export local records for this account']
+      : ['当前账号本地记录数', '首次采集说明', '采集操作', '导出本地记录账号数据'];
+    for (const [index, key] of ['counts.aria', 'guide.aria', 'actions.aria', 'exports.aria'].entries()) {
+      assert.equal(labels.find(element => element.getAttribute('data-i18n-aria-label') === key)
+        .getAttribute('aria-label'), expected[index]);
+    }
+    await popup.elements.get('#clear').listeners.get('click')();
+    assert.match(confirmations.at(-1), locale === 'en'
+      ? /^Clear all local conversations and update records for account accountA/u : /^清除账号 accountA/u);
+    assert.equal(popup.runtimeMessages.length, 0, 'declining the translated confirmation does not clear data');
+    assert.equal(popup.elements.get('#message-count').textContent, '9');
+  }
+});

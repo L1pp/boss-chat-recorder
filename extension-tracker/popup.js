@@ -45,7 +45,6 @@ const browserLanguage = chrome.i18n?.getUILanguage?.();
 let locale = resolveLocale(null, browserLanguage);
 let preferenceRead = false;
 let languageRevision = 0;
-let languageSavePromise = Promise.resolve();
 let languageSaveFailed = false;
 let viewReady = false;
 let accountPresentation = message('account.loading');
@@ -796,8 +795,8 @@ languageSelect?.addEventListener('change', () => {
   locale = preference;
   languageSaveFailed = false;
   renderLanguage();
-  // Serialize preference writes, without retrying or touching account data and collection IPC.
-  languageSavePromise = languageSavePromise.then(async () => {
+  // Issue each native write now; do not leave the final choice queued in a closing popup.
+  return (async () => {
     try {
       await chrome.storage.local.set({ [LANGUAGE_STORAGE_KEY]: preference });
       if (revision === languageRevision) languageSaveFailed = false;
@@ -808,8 +807,7 @@ languageSelect?.addEventListener('change', () => {
       languageStatus.hidden = !languageSaveFailed;
       languageStatus.textContent = languageSaveFailed ? t('language.saveFailed') : '';
     }
-  });
-  return languageSavePromise;
+  })();
 });
 renderLanguage();
 void refreshState().finally(scheduleProgressPoll);
