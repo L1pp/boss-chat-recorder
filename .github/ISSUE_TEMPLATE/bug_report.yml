@@ -7,7 +7,7 @@ body:
     attributes:
       label: Extension version / 扩展版本
       description: Include the extension version, or identify the affected repository script or demo.
-      placeholder: "0.8.12"
+      placeholder: "Version from chrome://extensions, or script name"
     validations:
       required: true
   - type: textarea
@@ -35,4 +35,4 @@ body:
   - type: markdown
     attributes:
       value: >-
-        Do not attach real chats, UIDs, recruiter contacts, verification codes, Cookies, pairing tokens, keys, or complete real exports. Report security issues privately under SECURITY.md. 请勿附上真实聊天或凭据；安全漏洞请按 SECURITY_CN.md 私下报告。
+        Use synthetic data; exclude real chats, UIDs, contacts, exports, and credentials. Report vulnerabilities privately under [Security reporting](https://github.com/L1pp/boss-chat-recorder/blob/main/.github/SECURITY.md). 请勿附上真实数据或凭据；安全漏洞请按[安全问题报告](https://github.com/L1pp/boss-chat-recorder/blob/main/docs/zh-CN/SECURITY.md)私下报告。

@@ -1,33 +1,50 @@
 # Testing and evidence boundaries
 
-[English](TESTING.md) | [简体中文](TESTING_CN.md)
+[English](TESTING.md) | [简体中文](zh-CN/TESTING.md)
 
-Tests have two layers: Node offline regression for data and control logic, and isolated Chromium for native extension APIs, encrypted storage, and browser lifecycle. Both use synthetic data. They do not log in to BOSS, read a personal browser profile or real chats, or connect to the store.
+Node tests cover data and control logic; isolated Chromium tests exercise native extension APIs, storage, and browser lifecycle. Both use repository synthetic data without BOSS login, personal profiles, real chats, or store access.
 
-## Node offline regression
+## Build and Node regression
 
-Use Node.js 24 or later. No third-party dependency installation is required for this layer:
+Use Node.js 24 or later. This layer needs no third-party dependency installation:
 
 ```sh
+npm run build
 npm test
 npm run check
-```
-
-Tests cover conversation selection, message deduplication, pagination and pauses, account partitions, rejection of late writes, export scope, commit and recovery behavior, popup state, and synthetic HTTP responses for the release client. They use replacement Chrome APIs, DOM, IndexedDB, or fetch implementations. They do not replace native-browser or live-platform acceptance.
-
-`check` checks committed bundles against generated source, public file scope, licenses and versions, synthetic examples, and a limited set of sensitive patterns. It does not connect to external sites and cannot establish that every type of personal information has been detected. `node_modules/`, reports, coverage, and `dist/` are ignored generated directories. Extension ZIPs use an explicit list of public runtime files.
-
-## Coverage
-
-```sh
 npm run test:coverage
 ```
 
-Node's native V8 coverage produces a console summary and `coverage/lcov.info`. It describes `extension-tracker/` and `scripts/` files actually executed by that Node run. Unloaded files may not appear, and code executed through a VM or data URL may not map back to source files. Chromium tests are not part of this report. Use it to find untested logic, not as a project correctness percentage or platform compatibility rate. No percentage threshold gates a pass.
+| Command | Purpose |
+| --- | --- |
+| `build` | Generate the committed extension bundles from source |
+| `test` | Run offline regression with replacement Chrome APIs, DOM, IndexedDB, and fetch |
+| `check` | Compare bundles without rewriting them; check public files, licenses, versions, synthetic examples, and selected sensitive patterns |
+| `test:coverage` | Print V8 coverage and write `coverage/lcov.info` |
 
-## Chromium synthetic regression
+Node regression covers incremental selection, deduplication, pagination and pauses, UID partitions and late writes, export scope, commit/recovery behavior, popup state, and synthetic release-client HTTP responses.
 
-Install the test tools and Chromium once:
+Coverage describes only files actually executed by the Node run in `extension-tracker/` and `scripts/`. Unloaded files may be absent; VM/data-URL execution may not map to source. Chromium is excluded. There is no coverage-percentage pass threshold. Coverage locates missing tests, while source checks detect only the sensitive patterns they implement.
+
+Generated `node_modules/`, reports, `coverage/`, and `dist/` are ignored. Runtime ZIPs use the explicit file list in `scripts/package-extension.mjs`.
+
+## Offline demo and fixtures
+
+Open [examples/index.html](../examples/index.html) directly in a browser. No extension, server, or platform login is needed, and the page makes no network requests.
+
+Switch between two fictional accounts and all-record, latest-update, and no-change exports. The accounts reuse a recruiter ID and message ID with different contents; fixtures include media summaries, incomplete history, and unknown sending times. The Chinese/English switch changes this page's interface only; messages retain their original Chinese, and the choice is not persisted.
+
+Regenerate the page and [JSON fixtures](../examples/demo-data/) with:
+
+```sh
+npm run demo
+```
+
+The [generator](../scripts/generate-demo.mjs) uses the production export module. The page demonstrates archive/export semantics; it is not a live-site screenshot or an extension chat browser.
+
+## Chromium regression
+
+Install the development tools and Chromium, then build and run:
 
 ```sh
 npm ci --ignore-scripts
@@ -36,38 +53,30 @@ npm run build
 npm run test:browser
 ```
 
-On Linux, missing browser system libraries can be installed with `npm run test:browser:install -- --with-deps`. The install/test wrappers share this project's `node_modules/.cache/boss-browser/`; they do not clear a shared Playwright cache. Browser profiles are new directories in the system temporary directory. Playwright is a development dependency and is absent from the store ZIP.
+On Linux, install missing system libraries with `npm run test:browser:install -- --with-deps`. The wrappers use the project cache at `node_modules/.cache/boss-browser/`, without clearing shared Playwright caches. Profiles are new system-temporary directories. Playwright is a development dependency and is excluded from the extension ZIP.
 
-Tests load the extension using the public package list and seed two repository synthetic accounts through production storage modules. They verify:
+The suite loads the extension from the public package list and seeds two synthetic accounts through production storage modules. It checks:
 
-- Protected archive values in native `chrome.storage.local` are ciphertext; the native IndexedDB AES-GCM CryptoKey is non-extractable; the popup displays local cache data.
-- The actual browser display of first-collection guidance, primary actions, and archive controls with empty and existing synthetic caches, including synthetic screenshots.
-- Real browser-language selection (Chinese, English, and an unsupported language falling back to English), immediate popup switching, locally remembered preference across a cold restart, and unchanged Chinese message exports. Node regressions additionally cover in-flight actions, recovery after errors, and late preference reads.
-- A `zh-TW` browser selects the Chinese UI and metadata. Rapid language choices are persisted before popup closure even when the first native storage acknowledgement is artificially delayed; the native writes themselves still commit. Node tests also assert translated accessibility attributes, the refresh tooltip, and the clear-confirmation text without deleting records.
-- Exports and clearing remain account-specific when two synthetic accounts reuse recruiter and message IDs.
-- A real worker stop and wake, followed by completely closing Chromium and reopening the same temporary profile, preserves readable/exportable records without reseeding.
+- Native encrypted `chrome.storage.local` values, a non-extractable IndexedDB CryptoKey, and popup cache display.
+- Empty/existing archive guidance and actions, with synthetic screenshots.
+- Browser-language selection, including `zh-TW` and unsupported-language fallback, immediate switching, persistence after rapid choices and cold restart, and unchanged Chinese message exports. Node tests cover in-flight actions, delayed preference reads, recovery, and translated accessibility/confirmation text.
+- Account-specific export and clearing when recruiter/message IDs overlap.
+- Worker stop/wake and a full Chromium restart with the same temporary profile, without reseeding.
 
-Export and clearing calls come from a real extension page using production modules; cache display uses `popup.html`. The current headless harness does not expose an automatable toolbar action-popup view, so a successful action-popup-to-worker message round trip is not covered by this current automated browser suite. Node tests cover those message handlers. Earlier one-off native acceptance is recorded separately in [verification](VERIFICATION.md).
+Export and clearing use a real extension page with production modules; display checks use `popup.html`. The headless harness does not automate a successful toolbar action-popup-to-worker round trip. Node tests cover those message handlers; earlier one-off native acceptance is recorded in [verification](VERIFICATION.md).
 
-Browser tests block external network access and do not start collection. Cleanup removes only temporary directories created by that run after checking their paths; no personal Chrome or Edge profile is used.
+External network is blocked and collection is not started. Cleanup removes only verified temporary paths created by that run. On failure, screenshots and traces remain in `test-results/`; the HTML report is in `playwright-report/`. Open it with `npx playwright show-report`. There are no automatic retries, pixel-comparison checks, or fixed-second performance thresholds.
 
-On failure, synthetic screenshots and traces are retained. The HTML report is in `playwright-report/` and attachments in `test-results/`; use `npx playwright show-report` to open it. Tests do not automatically retry, compare screenshots pixel by pixel, or impose a fixed-second performance threshold.
+## CI and acceptance limits
 
-## GitHub Actions
+Pushes and PRs run Node 24 tests, coverage, public checks, and ZIP packaging on Ubuntu and Windows, plus native Chromium regression on Ubuntu. Coverage/browser diagnostics are retained for 7 days; runtime ZIPs for 14 days. CI needs no Google or website credentials.
 
-Pushes and PRs run:
+The manual release build also runs Chromium regression. Store behavior depends on the selected operation; see [releasing](RELEASING.md).
 
-- Node 24 offline tests, coverage, public-source checks, and ZIP packaging on Ubuntu and Windows.
-- Chromium synthetic regression with the extension actually loaded on Ubuntu.
-- Coverage and browser diagnostics retained for 7 days, and public runtime ZIP artifacts retained for 14 days. CI needs no Google identity, release token, or real website account.
+These checks do not establish:
 
-The manual release workflow's build stage also runs browser regression. Upload and review submission run only when the respective operation is explicitly selected and tests pass. `status` only queries the store; it does not run browser tests, upload, or submit. See [releasing](RELEASING.md).
+- Switching between two real accounts, current BOSS API/login compatibility, or resolution of platform restrictions.
+- Support for every operating system, Edge, or the minimum Chrome version.
+- Recovery of deleted history, a platform-approved request rate, full-account history coverage, or store approval.
 
-## Remaining manual boundaries
-
-- Synthetic Chromium isolation does not establish successful switching between two real accounts.
-- Offline pagination and incremental tests do not establish current BOSS API, login, or platform-restriction compatibility.
-- Passing on the current Chromium does not establish support across every operating system, Edge, or the minimum Chrome version.
-- Passing tests do not recover deleted website history, establish a platform-approved collection rate, or constitute store approval.
-
-References: [Node test coverage](https://nodejs.org/docs/latest-v24.x/api/test.html#collecting-code-coverage) and [Playwright extension testing](https://playwright.dev/docs/chrome-extensions). The separation of test layers and local fixtures also drew on [Parallel AI's test workflow](https://github.com/ParkerCai/parallel-ai-extension/blob/main/.github/workflows/test.yml).
+References: [Node coverage](https://nodejs.org/docs/latest-v24.x/api/test.html#collecting-code-coverage), [Playwright extension testing](https://playwright.dev/docs/chrome-extensions), and the [Parallel AI test workflow](https://github.com/ParkerCai/parallel-ai-extension/blob/main/.github/workflows/test.yml) that informed the fixture/test-layer organization.

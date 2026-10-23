@@ -26,4 +26,4 @@ body:
   - type: markdown
     attributes:
       value: >-
-        This individually maintained project evaluates proposals by scope and available time, without feature or platform-support commitments. Do not attach real chats, UIDs, contacts, codes, Cookies, pairing tokens, or complete real exports. 项目不承诺实现建议；请勿附上真实聊天、个人账号数据或凭据。
+        Proposals are reviewed as time allows, without feature or platform-support commitments. Use synthetic examples and exclude real chats, account data, exports, and credentials. 项目不承诺实现建议；请使用合成示例，勿附真实数据或凭据。

@@ -1,6 +1,6 @@
 # Repository guidance
 
-Developer documentation uses English by default, with linked Chinese `_CN.md` counterparts. Preserve the Chinese material when adding or updating English documentation. Maintainer conversations may use Chinese. The user-facing extension targets the Chinese BOSS Zhipin market: Chinese browser languages select Simplified Chinese; other or unknown languages fall back to English. An explicit local language choice takes precedence. This is the public source repository of a Manifest V3 extension. Runtime code lives in `extension-tracker/`; generated content bundles come from `scripts/build-extension.mjs`.
+Developer documentation defaults to English. Keep the root `README_CN.md` and the Chinese guides in `docs/zh-CN/` consistent with their English counterparts; store materials use `store/zh-CN/`. Community guidelines live in `.github/`. Use the [documentation index](docs/README.md) for details and keep the README focused on the project overview. Maintainer conversations may use Chinese. The user-facing extension selects Simplified Chinese for Chinese browser languages and English otherwise; a local manual choice takes precedence. Runtime code lives in `extension-tracker/`; generated collection bundles come from `scripts/build-extension.mjs`.
 
 Use only repository synthetic fixtures and new temporary browser profiles for tests. Do not log in to BOSS, send messages, submit applications, upload real records, or access a personal browser profile. Do not trigger store upload or publish operations unless the human explicitly requests them.
 
