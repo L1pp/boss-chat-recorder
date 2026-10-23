@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: Security report / 安全问题（请私下报告）
     url: mailto:destiniye2008@gmail.com?subject=%5BSecurity%5D%20BOSS%20Chat%20Recorder
-    about: Report vulnerabilities privately. Do not post real chats or vulnerability details in public issues. 请勿公开漏洞细节或真实聊天。
+    about: Report vulnerabilities privately; exclude real chats and credentials. 安全漏洞请私下报告，勿附真实聊天或凭据。

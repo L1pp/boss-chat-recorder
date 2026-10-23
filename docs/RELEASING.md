@@ -1,84 +1,68 @@
-# GitHub packaging and Chrome Web Store releases
+# Packaging and Chrome Web Store releases
 
-[English](RELEASING.md) | [简体中文](RELEASING_CN.md)
+[English](RELEASING.md) | [简体中文](zh-CN/RELEASING.md)
 
-## Change and release workflow
+## Manual release workflow
 
-Maintain public source through focused GitHub PRs. Commit on a branch, open a PR, let configured CI and automatic code/security reviews run when their trigger conditions apply, and address relevant findings before merging. After merge, manually run GitHub Actions on `main` to prepare the formal store package and, when requested, query the store, upload a draft, or submit for review. CI and AI review are checks and feedback, not a store update.
+Public changes go through focused branches and PRs, configured CI/review, and merge to `main`. The formal store package comes from GitHub Actions on merged `main`; local and PR CI ZIPs are previews. Several PRs may form one release.
 
-The final store package comes from merged `main` and GitHub Actions. Local ZIPs are development previews. A PR CI ZIP supports inspection before merge but is not the final store release package. Several focused PRs can accumulate into one later release.
-
-Entry point: **Actions → Build and publish Chrome Web Store extension → Run workflow**. This workflow runs only when manually dispatched, not automatically on pushes or PRs. Choose `main`.
+Open **Actions → Build and publish Chrome Web Store extension → Run workflow**, and select `main`. The [workflow](../.github/workflows/release.yml) runs only on manual dispatch.
 
 | `operation` | Effect |
 | --- | --- |
-| `build` (default) | Builds, runs offline/browser tests and public-source checks, and produces a downloadable extension ZIP. Does not connect to Google. |
-| `status` | Uses a short-lived Google access token to read the existing store item's status. Does not build, upload, or submit. |
-| `upload` | Builds a ZIP, uploads a new draft for the existing store item, and waits for Google's upload acknowledgement. Does not submit for review. |
-| `publish` | Builds, uploads, then submits for normal review. Approval is followed by publication under the item's existing visibility settings. |
+| `build` (default) | Build, run offline/browser tests and public checks, and produce a ZIP without connecting to Google |
+| `status` | Read the existing store item's status using a short-lived token; no build, upload, or submission |
+| `upload` | Build and upload a new draft, waiting for Google's acknowledgement; no review submission |
+| `publish` | Build, upload, and submit for normal review; approval publishes under the item's existing visibility |
 
-`github_release` is **off by default**. When enabled, a successful build and selected store operation create GitHub Release `v<manifest.version>` with the same ZIP attached. `status` ignores this option. An existing release with that name causes an error; the workflow does not overwrite it.
+`github_release` defaults to `false`. When enabled, successful build/store work creates GitHub Release `v<manifest.version>` with the same ZIP. `status` ignores it; an existing release name fails rather than being overwritten. CI and `build` with `github_release=false` create neither a GitHub Release nor a store submission.
 
-GitHub Actions is the automation runner. A GitHub Release is a versioned public download with release notes. Chrome Web Store submission is a separate operation. Running CI or `build` with `github_release=false` creates neither a GitHub Release nor a store submission.
+For initial setup, run `build` to inspect the package, then `status` after configuring Google identity. For updates, change the public source and version fields in `package.json` and `extension-tracker/manifest.json`, complete the PR, and merge before dispatch. Choose `upload` for an authorized draft update or `publish` for an authorized review submission. Google rejects duplicate versions; the workflow does not increment or commit them. A separate development build need not match the store version.
 
-## Package contents
+Upload/submission jobs share an extension-specific concurrency group; status queries do not occupy it. Actions `publish` uploads its own run's code, and a failed or duplicate-version upload prevents submission of another draft.
 
-The ZIP contains only runtime files explicitly listed in `scripts/package-extension.mjs`, with `manifest.json` at its root. Source-only modules, tests, synthetic demos, store artwork, credentials, local debug files, and personal-data directories are excluded. Workflow artifacts are retained for 14 days; GitHub Release attachments remain with the release.
+Submission acknowledgement is not public availability. Review results, listing text, artwork, privacy disclosures, visibility, and account settings remain in the store dashboard; this workflow does not edit them or bypass review.
 
-Successful push/PR checks also generate `boss-chat-recorder-Linux-ci` and `boss-chat-recorder-Windows-ci` artifacts containing the extension ZIP for inspection before merge. CI does not request Google tokens or contact the store.
+## Package contents and local preview
 
-Local preview packaging uses Node.js 24 without dependency installation:
+The ZIP contains only runtime files listed in `scripts/package-extension.mjs`, with `manifest.json` at its root. Source-only modules, tests, demos, store artwork, credentials, debug files, and personal data are excluded.
+
+Actions ZIPs are retained for 14 days. Push/PR checks also produce `boss-chat-recorder-Linux-ci` and `boss-chat-recorder-Windows-ci` previews without requesting Google tokens. GitHub Release attachments remain with their release.
+
+For a local preview, follow the build/check steps in [testing](TESTING.md), then run:
 
 ```sh
-npm run build
-npm test
-npm run check
 npm run package:extension -- --output /path/to/extension.zip
 ```
 
-Without `--output`, the ZIP is written to ignored `dist/boss-chat-recorder-<version>.zip`. Run source checks first; the ZIP itself is not part of the public source file list.
+Without `--output`, the package goes to ignored `dist/boss-chat-recorder-<version>.zip`. Packaging uses Node.js 24 and needs no dependency installation.
 
-## One-time Google authentication
+## One-time Google identity setup
 
-Store updates use [Chrome Web Store API v2](https://developer.chrome.com/docs/webstore/using-api) and a [publishing service account](https://developer.chrome.com/docs/webstore/service-accounts). The fixed extension ID is `phaihpchfdihnclgjhpmpnhobdcogdhb`.
+The target extension is `phaihpchfdihnclgjhpmpnhobdcogdhb`. Store operations use [Chrome Web Store API v2](https://developer.chrome.com/docs/webstore/using-api) and a [publishing service account](https://developer.chrome.com/docs/webstore/service-accounts).
 
-Authentication is GitHub OIDC → Google Workload Identity Federation → publishing service account → short-lived OAuth access token. No service-account JSON private key, personal refresh token, or browser Cookie is stored in the repository. Google's authentication action generates a token only for store jobs and does not create a credential file for packaging.
-
-`status` requests the official `chromewebstore.readonly` scope. Only `upload` and `publish` request the `chromewebstore` write scope.
-
-Setup:
+Authentication follows GitHub OIDC → Google Workload Identity Federation → publishing service account → short-lived OAuth token. No service-account private key, personal refresh token, or browser Cookie is stored in the repository, and the authentication action creates no packaging credential file. `status` requests `chromewebstore.readonly`; only `upload`/`publish` request `chromewebstore` write scope.
 
 1. Enable `chromewebstore.googleapis.com`, `iam.googleapis.com`, `iamcredentials.googleapis.com`, and `sts.googleapis.com` in the owner's Google Cloud project.
-2. Create a dedicated publishing service account without broad project Owner or Editor roles.
-3. Create a GitHub Workload Identity Pool/OIDC Provider with issuer `https://token.actions.githubusercontent.com`. Restrict trust to this repository and `refs/heads/main`, using GitHub's numeric repository and owner IDs; do not trust arbitrary repositories.
-4. Grant the corresponding GitHub identity `roles/iam.workloadIdentityUser` on that service account so it can request short-lived tokens.
-5. In the Chrome Web Store dashboard, open **PUBLISHER → Settings**, scroll to **Service account**, enter its email, and choose **Add a service account**. This is not under **ACCOUNT → Profile**. Google currently supports one service-account association per publisher; confirm the purpose of any existing binding before changing it.
-6. Read the Publisher ID from **Publisher → Settings**.
-7. In GitHub **Settings → Secrets and variables → Actions → Variables**, configure the three identifiers below. They are resource identifiers, not private keys; do not put tokens in variables.
+2. Create a dedicated publishing service account without broad Owner/Editor roles.
+3. Create a Workload Identity Pool/OIDC Provider with issuer `https://token.actions.githubusercontent.com`. Restrict trust to this repository and `refs/heads/main`, using GitHub's numeric repository and owner IDs.
+4. Grant that GitHub identity `roles/iam.workloadIdentityUser` on the service account.
+5. In the store dashboard, use **PUBLISHER → Settings → Service account → Add a service account** to associate its email. This is separate from **ACCOUNT → Profile**. The publisher supports one association; check any existing binding's purpose before replacing it.
+6. Read the Publisher ID from **Publisher → Settings**, then set these repository **Settings → Secrets and variables → Actions → Variables**:
 
-| GitHub variable | Value |
+| Variable | Value |
 | --- | --- |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project-number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>` |
-| `CWS_SERVICE_ACCOUNT` | Dedicated publishing service-account email |
-| `CWS_PUBLISHER_ID` | Publisher ID shown by the store dashboard |
+| `CWS_SERVICE_ACCOUNT` | Publishing service-account email |
+| `CWS_PUBLISHER_ID` | Store Publisher ID |
 
-References: [deployment-pipeline identity federation](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) and [google-github-actions/auth](https://github.com/google-github-actions/auth). The account owner handles initial login, Google terms, and publisher association. This path does not require paid compute resources.
+These variables hold identifiers, not tokens or private keys. The account owner completes initial login, Google terms, and publisher association.
 
-## Initial verification and updates
+Configuration references: [deployment-pipeline identity federation](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines) and [google-github-actions/auth](https://github.com/google-github-actions/auth).
 
-First run `build` and inspect the downloadable ZIP. After configuring Google identity, run `status` and confirm the target extension's published version and review state. These two operations do not change store content.
+## Release-client CLI
 
-For a new version, update public source and the version fields in `package.json` and `extension-tracker/manifest.json`, complete PR checks and review, and merge to `main`. Then dispatch the release workflow. Use `upload` if the owner wants a draft before review, or `publish` when submission is authorized. `publish` rebuilds, uploads, and submits. Google does not accept duplicate version numbers; the workflow does not increment or commit them. A separate development/debug build need not match the store version.
-
-If review submission is paused, choose only an operation within the owner's authorization: `build` is local-to-Actions packaging, `status` is read-only, and `upload` changes the store draft. Do not choose `publish` without submission authorization.
-
-An API response indicating submission is not proof of public availability. The dashboard remains the source for review results, account issues, listing text, and privacy disclosures. This workflow does not change listing text, pictures, visibility, account settings, or request a review bypass.
-
-Uploads and submissions share a GitHub concurrency group for this extension so two manual releases do not interleave different drafts. Status queries do not occupy that group. `publish` uploads the code from its own run rather than submitting a pre-existing draft. If Google rejects a duplicate version upload, the job stops without submitting some other draft.
-
-## CLI
-
-The release client reads `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`, and `CWS_ACCESS_TOKEN` from environment variables. The token is used only for fixed official Google APIs and is not logged.
+The client reads `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`, and `CWS_ACCESS_TOKEN` from the environment. It uses the token only for fixed official Google APIs and does not log it.
 
 ```sh
 npm run store:status
@@ -86,4 +70,4 @@ npm run store:upload -- --zip /path/to/extension.zip
 npm run store:publish
 ```
 
-`upload` and `publish` are actual writes. Use only `status` for a connection check. During asynchronous upload processing, the client polls Google's status endpoint without re-uploading. An upload error or wait timeout fails the operation and prevents subsequent review submission.
+The CLI exposes separate status, upload, and submission steps. Use `status` for a connection check; `upload` and `publish` change the store. Asynchronous upload processing polls status without re-uploading; an error or timeout fails the operation and prevents the workflow's subsequent submission.

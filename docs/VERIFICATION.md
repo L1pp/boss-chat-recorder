@@ -1,103 +1,91 @@
 # Verification and reproducibility
 
-[English](VERIFICATION.md) | [完整中文记录](VERIFICATION_CN.md)
+[English](VERIFICATION.md) | [简体中文](zh-CN/VERIFICATION.md)
 
-This page summarizes recorded acceptance evidence and its limits. The [Chinese record](VERIFICATION_CN.md) retains the full chronological development notes. Test counts and platform observations below belong to their stated versions and dates; they are not a claim that every later version or website state was tested in the same way.
+Recorded results belong to the versions and dates below. **0.8.12 is an unreleased source candidate**; its first-collection and bilingual UI work uses synthetic fixtures and isolated profiles, without a new real-account acceptance run or store submission. Current checks and reproduction commands are in [TESTING.md](TESTING.md).
 
-This public copy has no local debug bridge. References to one describe historical troubleshooting in a separate development copy. Real exports, account UIDs, and diagnostic logs are not public artifacts.
+Only one real account was available. Offline account/store/worker tests and two-account synthetic browser tests do not establish two-real-account switching. Real exports, real account UIDs, and diagnostic logs are excluded from this repository. Historical bridge observations came from a separate development copy; the public extension contains no debug bridge.
 
-## Current scope
+## Real collection: 0.8.10, 2026-10-17
 
-The last store version documented in this repository is 0.8.11; 0.8.12 is an unreleased source candidate. Current development checks are described in [TESTING.md](TESTING.md). First-collection and bilingual UI changes use synthetic fixtures and isolated profiles; they do not imply a new real-account acceptance run or a store submission.
-
-Two-real-account switching remains deferred because only one real account was available. Dedicated offline account/store/worker tests and synthetic native-browser isolation are retained. Synthetic account separation and a successful single-account run must not be described as multi-real-account acceptance.
-
-## 0.8.11 native encryption and restart acceptance
-
-The public entry encrypts new account-archive, runtime, and conversation-record values with AES-GCM. It automatically persists a non-extractable key in the same browser profile's IndexedDB. Existing plaintext is read compatibly rather than migrated throughout retained real storage. The separate development entry kept its original storage behavior. Minimum Chrome 102 supports trusted-context storage access.
-
-The public candidate passed **175 offline tests**, and the development source passed **209**, with zero failures. Seventeen added cases covered real WebCrypto round trips, large text, random IVs, AAD mismatch, preserving old values on failure, key concurrency and transaction commit, restart reads, account clearing, and storage access scope. After store artwork was added, the same regressions and build checks still passed: 86 public allowed files and 96 development allowed files. PNGs were copied as binary and checked for their pixel dimensions; manifest icons include 16, 32, 48, and 128 pixels.
-
-On **2026-10-18**, isolated Chromium **151.0.7922.34** loaded the public extension with network disabled. Two repository synthetic accounts held 2 conversations/4 messages and 2 conversations/3 messages. All 10 known protected values had ciphertext envelopes; the native IndexedDB CryptoKey was non-extractable. A one-off native action-popup acceptance used normal messages to read and export matching counts without mixing account contents.
-
-Native CDP stopped the worker and observed `runningStatus=stopped`, then woke it for reads. Chromium was then fully closed and restarted with the same test profile, without reseeding. Both stages retained the same key and ciphertext and produced unchanged read/export counts. This was native API acceptance, not an IndexedDB substitute. See [acceptance-0.8.11.json](../store/acceptance-0.8.11.json).
-
-No personal browser profile or real BOSS account was accessed during this encryption acceptance. It did not migrate a retained real archive, test two real accounts, or cover Chrome 102 and all other browser versions. Store screenshots show synthetic data in the actual public extension, with explanatory framing laid out in the isolated test browser. This historical one-off action-popup check is distinct from the current automated headless suite's limitations.
-
-## Public copy without diagnostics
-
-The development-only `prepare:public` command generated a separate directory from an explicit source list without overwriting the active extension or real data. That command and generator are not public-copy prerequisites. The public copy removes the bridge, pairing UI, temporary diagnostic messages, and localhost optional permission while retaining the same kernel, UID partitions, request interval, and save-activity acknowledgements.
-
-At that stage, the public copy passed **158 offline tests** and the development copy with diagnostics passed **192**, all with zero failures. Public-startup differences were tested offline; real platform acceptance described below used the same-kernel development copy, rather than a new real collection solely for the public entry.
-
-## 0.8.10 real collection and independent incremental run
-
-On **2026-10-17**, real Chrome reloaded 0.8.10, continued the interrupted run from retained records, and completed it. This was not an uninterrupted empty-library collection. A later independent run had a new run ID and `mode=incremental`, distinguishing it from continuation.
+Real Chrome resumed an interrupted run from retained records and completed it. This was not an uninterrupted empty-library collection. A later independent run had a new run ID and `mode=incremental`.
 
 | Evidence | Recorded result |
 | --- | --- |
-| Completed collection | All 375/375 returned conversations; 3,634 messages with IDs; 0 failures |
+| Completed collection | 375/375 returned conversations; 3,634 messages with IDs; 0 failures |
 | Final state | `completed`, `active=false`, `finalizing=false`, completion time present, no error |
-| Independent incremental | About 6 seconds; scanned 375, skipped 375, selected/refreshed/new messages 0, failures 0 |
+| Independent increment | About 6 seconds; scanned/skipped 375/375; selected, refreshed, newly saved messages, and failures all 0 |
 | Latest-update export | `mode=incremental`, `scope.noChanges=true`, empty conversations |
-| All-record export after increment | 375 conversations and 3,634 messages, matching the baseline |
-| Message-set comparison | By account/conversation/message ID: 0 added, lost, or duplicate; 0 changes to direction, content, time, media, or other message facts |
+| All-record export after increment | 375 conversations / 3,634 messages, matching the baseline |
+| Identity/fact comparison | By account/conversation/message ID: 0 added, lost, or duplicate; 0 changes to direction, content, time, media, or other message facts |
 
-All returned conversations reached the endpoint's available history end. Both all-record exports had no duplicate conversations or messages missing IDs. They retained `fullAccountCoverageVerified=false`: currently available history is not full-account, all-time history. The exports and logs stayed outside the public directory.
+Each returned conversation reached the endpoint's available history end. Both all-record exports had no duplicate conversations or messages missing IDs and retained `fullAccountCoverageVerified=false`. Available history does not establish all-time, full-account coverage. The independent increment contained no new or changed conversations.
 
-The independent run contained no new or changed conversations. Its success does not guarantee that future requests will avoid verification or other site restrictions.
+## Later export comparison: 2026-10-18
 
-## Later natural changes: export comparison on 2026-10-18
+After an archive update, diagnostic state and the all-record export both held **378 conversations / 3,697 messages with IDs**. The comparison found **3 new conversations and 63 new messages across 14 archived conversations**, including one platform job-assistant conversation. No prior conversation or message was lost, identity combinations were unique, and one existing message's time field changed.
 
-After the user updated the archive, local diagnostic state and a new all-record export both contained **378 conversations and 3,697 messages with IDs**. Compared with the previous all-record export, there were **3 new conversations and 63 new messages across 14 archived conversations**, including one platform job-assistant conversation. No prior conversation or message was lost. Account/conversation/message identity combinations were unique, and one existing message's time field changed.
+This establishes natural additions and changes in the later export. Its final run metadata says scanned 377, skipped 377, newly saved 0: the 63 additions cannot all be attributed to that last run, and 378 saved conversations are not the same denominator as 377 returned list entries.
 
-This establishes that natural additions and changed conversations reached the later export. The final run metadata attached to that export says scanned 377, skipped 377, and newly saved 0, so the 63 additions cannot all be attributed to that last run. The cumulative 378 saved conversations also differ from its 377 returned list entries. Coverage remains limited to records the website supplied.
+## Native encryption and restart: 0.8.11, 2026-10-18
 
-## Local-save failures and fixes
+The public entry encrypts new archive, runtime, and conversation-record values with AES-GCM and persists a non-extractable key in the profile's IndexedDB. Old plaintext remains readable without whole-library migration; the separate development entry retained its original storage behavior.
 
-The following observations explain the storage changes. They do not establish why the website previously requested verification or logged the user out.
+| Isolated Chromium 151.0.7922.34, network disabled | Recorded result |
+| --- | --- |
+| Repository synthetic accounts | 2 conversations / 4 messages and 2 conversations / 3 messages |
+| Native storage | All 10 known protected values had ciphertext envelopes; IndexedDB CryptoKey was non-extractable |
+| One-off native action popup | Normal read/export messages returned matching counts without account mixing |
+| Worker stop/wake | Observed `runningStatus=stopped`; wake retained the key, ciphertext, and read/export counts |
+| Full browser restart | Same persistent test profile, no reseeding; key, ciphertext, and counts unchanged |
 
-| Version | Observed failure or change | Offline result and real boundary |
-| --- | --- | --- |
-| 0.8.6 | A progress acknowledgement returned after 19.845 seconds against a 15-second total wait; stop reported `interrupted/BULK_CHECKPOINT_FAILED`, discovered 370/completed 0. Existing records and message counts were unchanged. | 146 tests, 0 failures; 67-file check. First acknowledgement 8.91 seconds. A paired development bridge exposed only status/logs/storage/stop, with no chat bodies or remote start. |
-| 0.8.7 | Removed repeated binding/partition reads and deep copies; retained atomic validation and existing schema. Early batches advanced but later timed out. | 152 tests, 0 failures; 67-file check. Early progress acknowledgements about 3.2–5.7 seconds and first snapshot about 4.0 seconds were partial observations only. |
-| 0.8.8 | Each progress operation previously moved about 17.1 MiB of bodies. A final post-interruption acknowledgement took 28.378 seconds; the original trigger was no longer in the rolling trace. Runtime was separated from bodies. | 161 tests, 0 failures; 67-file check. Synthetic 17 MiB coverage. Later real runtime about 1.43 MiB; status read 133 ms; progress about 0.35–0.45 seconds and first body ACK 5.751 seconds. Later body saves still timed out. |
-| 0.8.9 | Whole-body read 21.676 seconds plus write 5.440 seconds produced a 28.029-second acknowledgement. Per-conversation immutable versions and a single account index replaced whole-body saves while retaining the old root. | 171 tests, 0 failures; 71-file check. Synthetic 22 MiB coverage, failed index commits, UID 1/10 clearing, retry counts, unknown data. Initial real preparation 10.404 seconds and first snapshot ACK 4.149 seconds; a later ACK still exceeded the total budget. |
-| 0.8.10 | A successful 16.839-second save had advancing runtime read (~3.0 s), body write (~3.5 s), index (~4.3 s), and runtime publication (~5.3 s), but the fixed total wait had already timed out. Internal Port activity changed this to 15 seconds of inactivity. | 182 tests, 0 failures; 75-file check. Activity, silence, disconnection, cancellation, sender, Port binding, stop/drain, and generated-bundle integration covered. Real completion and independent increment are recorded above. |
+See [acceptance-0.8.11.json](../store/acceptance-0.8.11.json). This used native extension APIs, without a personal browser profile or real BOSS account. It did not verify retained-real-archive migration, two real accounts, or other browser versions such as Chrome 102. This one-off popup acceptance is distinct from the automated headless suite's scope.
 
-Only a final durable result acknowledges saved data. Activity notifications do not add storage polling, website requests, or timer keep-alives. Disconnecting does not cancel already accepted Chrome writes; the client does not automatically resend. Retained old versions and unpublished versions use space until per-account clearing; the split is not a claim that storage immediately shrank.
+Store screenshots use synthetic data in the actual public extension, with explanatory framing composed in the test browser. After artwork was added, the same tests and builds passed; public/development file checks covered 86/96 allowed files. PNG dimensions were checked, including 16/32/48/128-pixel manifest icons.
 
-## Earlier development snapshots
+## Historical offline checkpoints
 
-| Version | Recorded checks | Scope and limits at that point |
-| --- | --- | --- |
-| 0.8.0 | 55 tests, 0 failures; 50 allowed files; build and deterministic demo/bundle comparison | Simulated APIs and a VM running real generated bundles and worker modules; no real browser acceptance. |
-| 0.8.1 | 91 tests, 0 failures; 54-file check | Real account/list/partial history access found continued scanning after HTML and unclear interruption UI. Added pause/recovery tests. Fresh identity requests per operation were historical behavior, replaced later. No full real baseline yet. |
-| 0.8.3 | 105 tests, 0 failures; 55-file check | A real response was HTTP 200 `text/html` ending at `/web/passport/zp/verify.html`. Subsequent history stopped and records remained. This established verification, not its cause or a safe rate. Added persisted pause, badge, manual continuation, and recovery tests. |
-| 0.8.4 | 118 tests, 0 failures; 58-file check | After another interruption and user-reported web/mobile logout, removed repeated account requests, shared the 10-second interval, and added local popup cache. Simulated three starts made three identity requests; local operations made none. No live retest or rate guarantee. |
-| 0.8.5 | 113 tests, 0 failures | Returned to prototype 0.7.2's API kernel; kept UID/token bindings, pacing, pauses, and timeouts, while removing separate verification gates, trial state, obsolete rechecks, and total conversation deadlines. No real-account test in that change. |
+All test totals below passed with 0 failures. Counts describe different source snapshots, not one fixed suite. The 0.8.0–0.8.5 records are dated 2026-10-17 on Windows (Node.js 24.19.0 where recorded).
 
-The full Chinese chronology retains additional diagnostic details and the contemporaneous statements of what was still pending. Later evidence above supersedes earlier “not yet completed” notes for the same acceptance stage; it does not erase those historical failures.
+| Snapshot | Tests passed | Allowed-file check | Main scope |
+| --- | --- | --- | --- |
+| 0.8.0 | 55 | 50 | Mock APIs; VM integration of generated bundles and worker; deterministic demo/build. Recorded independent review found no remaining blockers after the reported race fixes. |
+| 0.8.1 | 91 | 54 | HTML/HTTP/API pause, stop/save handshake, recovery, and retained checkpoints. No complete live baseline at that point; per-operation identity reads were later replaced. |
+| 0.8.3 | 105 | 55 | Persisted verification pause, badge, manual continuation, repeated verification, and recovery. Changed live branch was still pending. |
+| 0.8.4 | 118 | 58 | Shared 10-second interval and local popup cache. Three simulated starts made three identity requests; local operations made none. No live retest. |
+| 0.8.5 | 113 | — | Prototype 0.7.2 API kernel; removed separate trial/verification gates, obsolete rechecks, and total conversation deadlines. No real-account test in that change. |
+| 0.8.6 | 146 | 67 | Core-save acknowledgement separated from badge/cache refresh; development-only diagnosis. |
+| 0.8.7 | 152 | 67 | Fewer binding/partition reads and copies; atomic binding and schema retained; failed commits preserve prior messages. |
+| 0.8.8 | 161 | 67 | Runtime/body separation with synthetic 17 MiB bodies; restart and failed-publication retries. |
+| 0.8.9 | 171 | 71 | Per-conversation versions and account index with synthetic 22 MiB bodies; failed commits, UID 1/10 clearing, retries, and unknown data. |
+| 0.8.10 | 182 | 75 | Port activity/inactivity, disconnect/cancel, sender/binding checks, stop/drain, and generated-bundle integration. |
+| Public copy without diagnostics / development copy | 158 / 192 | — | Public startup, bundle/worker integration, increment/export, and synthetic isolation. |
+| 0.8.11 public / development | 175 / 209 | 86 / 96 | 17 added cases: WebCrypto round trips, large text, IV/AAD, preservation on failure, key concurrency/commit, restart, clearing, and access scope. |
 
-## Reproduce offline checks
+The diagnostic-free public copy was generated from an explicit source list without overwriting the active extension or real data. It removed pairing, temporary diagnostic messages, the bridge, and localhost optional permission while retaining the same kernel, UID partitions, pacing, and save-activity acknowledgements. Its startup differences were tested offline; the real collection above used the same-kernel development copy.
 
-```sh
-npm run build
-npm run demo
-npm test
-npm run check
-```
+## Local-save diagnosis and fixes
 
-Node.js 24 or later is sufficient for this layer without third-party dependencies. `build:check` compares output from the same generator without writing. Public-source checks include allowed files, symlinks, known credential patterns, and excluded collection artifacts. Diagnostics report paths/categories rather than matched secrets. A clean scan does not establish that all possible personal information was detected.
+These observations explain storage changes, not why the website requested verification or logged the user out.
 
-Offline fixtures establish pagination, native ID handling, deduplication, paused/failed/retry selection, account/task boundaries, late-write rejection, exports, unknown times, media summaries, and deterministic demos. Isolated Chromium separately covers native storage and lifecycle. Neither layer connects to a real recruitment account or reads the original project's `data/` directory.
+| Version | Recorded observation and outcome |
+| --- | --- |
+| 0.8.6 | First progress ACK 8.91 s; later ACK 19.845 s exceeded a 15 s wait. Stop reported `interrupted/BULK_CHECKPOINT_FAILED`, discovered 370/completed 0; existing records and message counts were unchanged. The paired development bridge supported status/logs/storage/stop, without chat bodies or remote start. |
+| 0.8.7 | Early progress ACKs about 3.2–5.7 s and first snapshot about 4.0 s; three batches advanced, but later saves still timed out. These were partial-run observations. |
+| 0.8.8 | Previous progress operations moved about 17.1 MiB of bodies; a post-interruption ACK took 28.378 s, with the original trigger missing from the rolling trace. After runtime separation: runtime about 1.43 MiB, status read 133 ms, progress ACKs about 0.35–0.45 s, first body ACK 5.751 s, and 125 unchanged conversations skipped. Later body saves still timed out. |
+| 0.8.9 | Earlier whole-body read/write took 21.676/5.440 s, ACK 28.029 s, then final retry 13.089 s. Versioned conversation records replaced whole-body saves while retaining the old root. Initial real preparation took 10.404 s and first snapshot ACK 4.149 s (record write 309 ms, index 40 ms); a later ACK still exceeded the total wait. |
+| 0.8.10 | A successful 0.8.9 save took 16.839 s: runtime read ~3.0 s, body write ~3.5 s, index ~4.3 s, runtime publication ~5.3 s. The fixed 15 s total wait had already expired. An internal Port changed the budget to 15 s of actual storage inactivity; real completion and an independent increment followed. |
 
-## Unverified boundaries
+Only the final durable result confirms a save. Activity events add no storage polling, website requests, or timer keep-alives. Disconnecting does not cancel accepted Chrome writes and does not automatically resend. Old and unpublished versions occupy space until account clearing; splitting did not immediately shrink storage.
 
-- Two-real-account switching remains deferred; no synthetic test is described as a substitute.
-- The 0.8.10 completion phase did not observe the live verification-pause/manual-resume branch. Earlier verification evidence and offline tests do not establish its current site behavior.
-- Internal API changes, verification triggers, and an approved safe request rate remain unknown.
-- All large-archive sizes, prolonged network interruptions, browser versions, operating systems, and lifecycle combinations have not been exhausted.
-- Automated CI is not store approval, a distribution license, or proof of continued website compatibility.
+Earlier live evidence included an HTTP 200 `text/html` response ending at `/web/passport/zp/verify.html` during a 0.8.1 retest. Later history requests stopped and saved records remained. A subsequent interruption used non-success JSON, and the user reported web/mobile logout. These establish observed restrictions, not their cause or a safe request rate. The 10-second interval is not platform approval.
 
-Earlier browser tooling denied a local `file://` preview and that attempt did not bypass the restriction. Later isolated synthetic browser/UI work is recorded separately; the earlier blocked attempt must not be presented as a completed visual check. Store approval and source publication are also separate events from the historical tests above.
+## Reproduction and remaining limits
+
+Use [TESTING.md](TESTING.md) for current commands and browser coverage. Offline fixtures use mocked APIs, in-memory Chrome storage, and temporary directories; they do not access recruitment accounts or the original project's `data/`. They cover pagination/native IDs, increment/retry selection, UID/task boundaries, late writes, exports, verification pauses, and deterministic demos. Synthetic demo directories alone are not account-isolation evidence.
+
+- Two-real-account switching remains deferred.
+- The 0.8.10 completion did not exercise live verification-pause/manual-resume; offline tests do not establish current site behavior.
+- Future API compatibility, verification triggers, and an approved safe rate remain unknown.
+- Large-archive capacity, prolonged interruptions, browser/OS versions, and lifecycle combinations are not exhaustively covered.
+- Tests, source publication, store submission, and store approval are separate events.

@@ -4,13 +4,10 @@
 
 ## Behavior and privacy impact
 
-<!-- Note effects on collection, account separation, permissions, encryption, or export; write “None” if appropriate. 说明行为及隐私影响，无影响可写“无”。 -->
+<!-- Note effects on collection, account separation, permissions, encryption, or export; write “None” if appropriate. 说明相关行为及隐私影响，无影响可写“无”。 -->
 
 ## Validation
 
-- [ ] `npm test`
-- [ ] `npm run check`
-- [ ] When relevant: `npm run test:coverage` (report only, no percentage threshold)
-- [ ] For browser interaction changes: `npm run test:browser`
+<!-- List checks run and relevant checks not run. See https://github.com/L1pp/boss-chat-recorder/blob/main/docs/TESTING.md . 说明已运行及未运行的相关检查。 -->
 
-<!-- Explain relevant checks not run. Use synthetic reproductions and attachments; exclude real chats and credentials. 未运行的检查请说明原因；勿附真实聊天或凭据。 -->
+<!-- Use synthetic reproductions and attachments; exclude real chats and credentials. 示例和附件使用合成数据，勿附真实聊天或凭据。 -->
