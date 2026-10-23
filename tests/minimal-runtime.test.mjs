@@ -236,7 +236,8 @@ test('popup and archive routes use an explicit local account and do not probe BO
   assert.equal(selected.ok, true, JSON.stringify(selected));
   assert.equal(selected.accountUid, 'accountA');
   assert.deepEqual(Object.keys(h.localValues[POPUP_VIEW_KEY]).sort(),
-    ['accountUid', 'progress', 'summary', 'updatedAt', 'verificationRequired', 'verificationRetrying'].sort());
+    ['accountUid', 'hasCollectionHistory', 'progress', 'summary', 'updatedAt',
+      'verificationRequired', 'verificationRetrying'].sort());
   assert.equal(pageA.accountReads, 0);
 
   const bSelected = await ui(h, 'GET_STATE', undefined, { expectedAccountUid: 'accountB' });
@@ -336,6 +337,71 @@ test('a first start without a cached UID probes once, while local GET_STATE can 
   assert.equal(reopened.ok, true, JSON.stringify(reopened));
   assert.equal(reopened.accountUid, 'accountC');
   assert.equal(page.accountReads, 1, 'cached archive selection does not check current site login');
+});
+
+test('account-local collection history survives a tab switch and worker restart without borrowing progress or recreating cleared accounts', async () => {
+  const h = makeHarness();
+  const pageA = h.addPage(1, 'accountA');
+  const started = await start(h, 1, 'accountA');
+  assert.equal(started.ok, true, JSON.stringify(started));
+  assert.equal(started.hasCollectionHistory, true);
+  assert.equal((await h.store.getAccount('accountA')).runtime.hasCollectionHistory, true,
+    'accepted START progress and history marker share the runtime transaction');
+
+  const completed = { ...started.progress, status: 'completed', state: 'completed', active: false,
+    phase: 'completed', finishedAt: new Date().toISOString() };
+  const checkpoint = await h.handler({ type: 'BULK_PROGRESS', accountUid: 'accountA',
+    collectionToken: started.progress.collectionToken, progress: completed }, pageSender(1));
+  assert.equal(checkpoint.ok, true, JSON.stringify(checkpoint));
+  assert.equal(checkpoint.progress.status, 'completed');
+  assert.equal((await h.store.getAccount('accountA')).summary.contactCount, 0);
+  assert.equal((await h.store.getAccount('accountA')).summary.messageCount, 0);
+
+  // Emulate a 0.8.11 account with durable previousProgress but no new marker.
+  await h.store.updateAccount('accountA', partition => {
+    delete partition.runtime.hasCollectionHistory;
+    partition.runtime.progressByTab = {};
+  });
+  const pageAOnSecondTab = h.addPage(2, 'accountA');
+  const tab2 = await ui(h, 'GET_BULK_PROGRESS', 2, { expectedAccountUid: 'accountA' });
+  assert.equal(tab2.ok, true, JSON.stringify(tab2));
+  assert.equal(tab2.progress, null, 'the second tab has no task of its own');
+  assert.equal(tab2.view.progress, null, 'other-tab progress is not copied into this tab view');
+  assert.equal(tab2.hasCollectionHistory, true, 'account-local baseline progress identifies prior collection');
+  assert.equal(tab2.view.hasCollectionHistory, true);
+  assert.equal(pageAOnSecondTab.accountReads, 0);
+  assert.deepEqual(pageAOnSecondTab.loadedFiles, [], 'history lookup does not inject account or collector scripts');
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(h.localValues[POPUP_VIEW_KEY].hasCollectionHistory, true,
+    'the derived popup cache receives the same history flag');
+  assert.equal(h.localValues[POPUP_VIEW_KEY].progress, null);
+
+  const restartedHandler = createExtensionMessageHandler(h.chromeApi);
+  const reopened = await restartedHandler({ type: 'GET_STATE' }, popupSender);
+  assert.equal(reopened.ok, true, JSON.stringify(reopened));
+  assert.equal(reopened.accountUid, 'accountA');
+  assert.equal(reopened.hasCollectionHistory, true,
+    'a reconstructed worker derives compatibility history from baseline.previousProgress');
+  assert.equal(reopened.view.hasCollectionHistory, true);
+
+  await h.store.getOrCreateAccount('accountB');
+  const pageB = h.addPage(3, 'accountB');
+  const bPoll = await restartedHandler({ type: 'GET_BULK_PROGRESS', tabId: 3,
+    expectedAccountUid: 'accountB' }, popupSender);
+  assert.equal(bPoll.ok, true, JSON.stringify(bPoll));
+  assert.equal(bPoll.hasCollectionHistory, false, 'account B does not inherit account A history');
+  assert.equal(bPoll.progress, null);
+  assert.equal(pageB.accountReads, 0);
+  assert.deepEqual(pageB.loadedFiles, []);
+
+  const cleared = await restartedHandler({ type: 'CLEAR_ACCOUNT', tabId: 1,
+    expectedAccountUid: 'accountA' }, popupSender);
+  assert.equal(cleared.ok, true, JSON.stringify(cleared));
+  assert.equal(cleared.hasCollectionHistory, false);
+  assert.equal(cleared.view.hasCollectionHistory, false);
+  assert.equal(Object.hasOwn(h.localValues[ACCOUNT_STORE_KEY].accounts, 'account:accountA'), false,
+    'clearing removes the partition and marker without recreating the account');
+  assert.equal(pageA.accountReads, 1, 'all history reads and clears stay local');
 });
 
 test('a missing popup cache is initialized from the most recently updated local partition', async () => {

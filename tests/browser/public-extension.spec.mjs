@@ -53,7 +53,8 @@ test('first-run guidance uses the local empty view and existing records restore 
   await operationPage.evaluate(async () => {
     await chrome.storage.local.set({ 'bossReadonlyTracker.popupView.v1': {
       accountUid: 'demo-first-run', summary: { contactCount: 0, messageCount: 0 },
-      progress: null, verificationRequired: false, updatedAt: '2026-10-23T12:00:00.000Z',
+      progress: null, hasCollectionHistory: false, verificationRequired: false,
+      updatedAt: '2026-10-23T12:00:00.000Z',
     } });
   });
   const firstRunPage = await harness.openPopupPage();

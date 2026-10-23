@@ -20,6 +20,7 @@ let viewEpoch = 0;
 let mutationCount = 0;
 let lastProgress = null;
 let summaryIsKnownEmpty = false;
+let hasCollectionHistory = null;
 let firstRunWelcome = false;
 let firstStartRetryAvailable = false;
 let firstRunStarting = false;
@@ -77,6 +78,18 @@ function progressFromResponse(result) {
     verificationRequired: required };
 }
 
+function resolveCollectionHistory(declared, summary, progress, fallback = null) {
+  const hasSavedRecords = ['contactCount', 'messageCount'].some(key =>
+    Number.isFinite(summary?.[key]) && summary[key] > 0);
+  if (declared === true || progress || hasSavedRecords) return true;
+  if (declared === false) return false;
+  return fallback;
+}
+
+function unknownEmptyView() {
+  return Boolean(currentAccountUid) && hasCollectionHistory === null && summaryIsKnownEmpty && !lastProgress;
+}
+
 function popupViewFromPayload(payload, fallbackAccountUid = currentAccountUid) {
   if (!payload || typeof payload !== 'object') return null;
   const source = payload.view && typeof payload.view === 'object'
@@ -90,12 +103,15 @@ function popupViewFromPayload(payload, fallbackAccountUid = currentAccountUid) {
   const fallback = fallbackAccountUid === accountUid ? {
     summary: { contactCount: displayedCount(contactCount), messageCount: displayedCount(messageCount) },
     progress: lastProgress,
+    hasCollectionHistory,
   } : null;
   const summary = source.summary && typeof source.summary === 'object' ? source.summary :
     fallback?.summary || { contactCount: null, messageCount: null };
   const progress = Object.hasOwn(source, 'progress') || typeof source.verificationRequired === 'boolean'
     ? progressFromResponse(source) : fallback?.progress || null;
+  const history = resolveCollectionHistory(source.hasCollectionHistory, summary, progress, fallback?.hasCollectionHistory);
   return { ok: true, accountUid: String(accountUid), summary, progress,
+    hasCollectionHistory: history,
     verificationRequired: source.verificationRequired,
     updatedAt: source.updatedAt || fallback?.updatedAt || null };
 }
@@ -158,6 +174,7 @@ function primaryActionLabel() {
     return summaryIsKnownEmpty || firstCollectionInThisPopup ? '正在采集' : '正在更新';
   }
   if (canResumeProgress(lastProgress)) return '继续上次采集';
+  if (unknownEmptyView()) return '开始采集';
   return firstRunWelcome ? '开始首次采集' : '更新变化会话';
 }
 
@@ -270,15 +287,17 @@ function setMutationBusy(busy) {
   setEnabled(Boolean(currentAccountUid));
 }
 
-function clearView(message, { welcome = false } = {}) {
+function clearView(message, { welcome = false, preserveFirstStartRetry = false } = {}) {
   viewEpoch++;
   currentAccountUid = null;
   lastProgress = null;
   firstRunStarting = false;
   firstCollectionInThisPopup = false;
   summaryIsKnownEmpty = welcome;
+  hasCollectionHistory = welcome ? false : null;
   firstRunWelcome = welcome;
   if (welcome) firstStartRetryAvailable = false;
+  else if (!preserveFirstStartRetry) firstStartRetryAvailable = false;
   if (!welcome) legacyPopupViewConfirmedEmpty = false;
   accountLabel.textContent = '尚无本地记录';
   contactCount.textContent = '—';
@@ -365,13 +384,14 @@ function renderProgress(progress) {
   setEnabled(Boolean(currentAccountUid));
 }
 
-function applyState(result) {
+function applyState(result, { preserveFirstCollection = false } = {}) {
   if (!result?.accountUid || !result.summary) {
     clearView(statusForError(result?.error));
     return false;
   }
   currentAccountUid = result.accountUid;
   firstRunStarting = false;
+  if (!preserveFirstCollection) firstCollectionInThisPopup = false;
   legacyPopupViewConfirmedEmpty = false;
   accountLabel.textContent = result.accountUid;
   const contactCountKnown = Number.isFinite(result.summary.contactCount);
@@ -381,7 +401,8 @@ function applyState(result) {
   summaryIsKnownEmpty = contactCountKnown && messageCountKnown &&
     result.summary.contactCount === 0 && result.summary.messageCount === 0;
   const progress = progressFromResponse(result);
-  firstRunWelcome = summaryIsKnownEmpty && !progress;
+  hasCollectionHistory = resolveCollectionHistory(result.hasCollectionHistory, result.summary, progress);
+  firstRunWelcome = hasCollectionHistory === false && summaryIsKnownEmpty && !progress;
   firstStartRetryAvailable = false;
   renderProgress(progress);
   const cacheTime = result.updatedAt ? new Date(result.updatedAt).toLocaleString() : null;
@@ -500,12 +521,21 @@ async function refreshProgress() {
       }
       const wasFirstRunWelcome = firstRunWelcome;
       const progress = progressFromResponse(result);
-      firstRunWelcome = summaryIsKnownEmpty && !progress;
+      const displayedSummary = result.summary || {
+        contactCount: Number.isFinite(Number(contactCount.textContent)) ? Number(contactCount.textContent) : null,
+        messageCount: Number.isFinite(Number(messageCount.textContent)) ? Number(messageCount.textContent) : null,
+      };
+      hasCollectionHistory = resolveCollectionHistory(result.hasCollectionHistory, displayedSummary,
+        progress, hasCollectionHistory);
+      firstRunWelcome = hasCollectionHistory === false && summaryIsKnownEmpty && !progress;
       renderProgress(progress);
       const diagnostic = diagnosticForProgress(progress);
       if (diagnostic) setBackgroundStatus(diagnostic);
       else if (['failed', 'interrupted'].includes(progressState(progress))) {
         setBackgroundStatus(progressName(progress));
+      } else if (wasFirstRunWelcome &&
+        (progress?.finalizing === true || progressState(progress) === 'stopping')) {
+        setBackgroundStatus('正在保存停止前已读取的内容。');
       } else if (wasFirstRunWelcome && progress && isProgressRunning(progress)) {
         setBackgroundStatus('首次采集已启动，正在读取当前账号可读取的会话。');
       } else if (wasFirstRunWelcome && progressState(progress) === 'completed') {
@@ -585,7 +615,7 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
       statusLabel.textContent = statusForError(result?.error);
       if (['UNSUPPORTED_PAGE', 'TAB_NOT_AVAILABLE', 'ACCOUNT_IDENTITY_UNAVAILABLE',
         'SITE_VERIFICATION_REQUIRED'].includes(result?.error)) {
-        clearView(statusForError(result.error));
+        clearView(statusForError(result.error), { preserveFirstStartRetry: firstCollectionStart });
       }
       return;
     }
@@ -617,7 +647,7 @@ async function runAction(label, action, onSuccess = null, { mutation = false, al
     const updatesLocalView = ['START_UPDATE', 'STOP_UPDATE', 'CLEAR_ACCOUNT']
       .includes(messageType) || Boolean(result.view);
     if (switchedDuringStart) viewEpoch++;
-    if (view && updatesLocalView) applyState(view);
+    if (view && updatesLocalView) applyState(view, { preserveFirstCollection: firstCollectionStart });
     if (onSuccess) onSuccess(result);
     const latestProgress = progressFromResponse(viewPayload) || (updatesLocalView ? view?.progress : lastProgress);
     if (updatesLocalView && view) renderProgress(latestProgress || null);
@@ -657,7 +687,9 @@ document.querySelector('#update-incremental').addEventListener('click', () => {
       { mutation: true, messageType: 'START_UPDATE' });
   }
   if (isProgressRunning(lastProgress)) return;
-  return runAction(firstRunWelcome ? '正在启动首次采集…' : '正在更新变化会话…',
+  const startLabel = firstRunWelcome ? '正在启动首次采集…' :
+    unknownEmptyView() ? '正在启动采集…' : '正在更新变化会话…';
+  return runAction(startLabel,
     expectedUid => request('START_UPDATE', { mode: 'incremental' }, expectedUid), null,
     { mutation: true, messageType: 'START_UPDATE' });
 });

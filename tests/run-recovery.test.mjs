@@ -258,12 +258,14 @@ test('STOP remains callable while a separate mutation is waiting', async () => {
     if (message.type === 'CLEAR_ACCOUNT') return never;
     if (message.type === 'STOP_UPDATE') { stored = stopped; return { ok: true, accountUid: 'accountA', progress: stopped }; }
     throw new Error(`Unexpected request ${message.type}`);
-  });
+  }, { popupView: { accountUid: 'accountA', summary: { contactCount: 10, messageCount: 264 }, progress: stored } });
   await popup.settle();
+  assert.equal(popup.elements.get('#stop').hidden, false);
   popup.elements.get('#clear').listeners.get('click')();
   await popup.settle();
   assert.equal(popup.elements.get('#clear').disabled, true);
   assert.equal(popup.elements.get('#stop').disabled, false);
+  assert.equal(popup.elements.get('#stop').hidden, false, 'the visible stop control survives a waiting mutation');
 
   await popup.elements.get('#stop').listeners.get('click')();
   assert.equal(messages.some(message => message.type === 'STOP_UPDATE'), true);
@@ -332,7 +334,11 @@ test('a successful progress poll clears a prior timeout status', async () => {
   const nextPoll = [...popup.timers.values()].find(timer => timer.delay === 10000);
   assert.ok(nextPoll);
   await popup.fireTimer(nextPoll);
-  assert.equal(popup.elements.get('#status').textContent, '本机记录已加载。');
+  assert.match(popup.elements.get('#status').textContent, /记录已加载/u);
+  assert.doesNotMatch(popup.elements.get('#status').textContent, /超时/u);
+  assert.equal(popup.elements.get('#account').textContent, 'accountA');
+  assert.equal(popup.elements.get('#contact-count').textContent, '1');
+  assert.equal(popup.elements.get('#message-count').textContent, '2');
 });
 
 test('a successful progress poll does not replace an active foreground action prompt', async () => {

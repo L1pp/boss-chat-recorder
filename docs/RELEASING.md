@@ -1,7 +1,12 @@
 # GitHub 打包与 Chrome 商店发布
 
-发布入口：仓库 **Actions → Build and publish Chrome Web Store extension → Run workflow**。
-工作流只响应手动操作，不在推送代码或 PR 时自动发布。
+## 正式变更流程
+
+公开源码通过 GitHub 正式 PR 维护：从分支提交改动，创建 PR，等待已配置的 CI 和自动代码 / 安全审阅按其触发条件运行；查看并处理审阅意见，再合并 PR。合并后，从 `main` 手动运行 GitHub Actions 生成用于商店的正式包，并按需要查询商店、上传草稿或提交审核。CI 和 AI 审阅是检查与反馈，不代表商店已更新。
+
+最终商店包以合并到 `main` 的源码及 GitHub Actions 产物为准。本地 ZIP 只用于开发预览；PR CI 的 ZIP 可用于合并前检查，不作为最终商店发布包。
+
+发布入口：仓库 **Actions → Build and publish Chrome Web Store extension → Run workflow**。工作流只响应手动操作，不在推送代码或 PR 时自动发布。请在 `main` 上运行。
 
 | operation | 效果 |
 | --- | --- |
@@ -59,7 +64,9 @@ Google 配置方法见 [部署流水线身份联合](https://docs.cloud.google.c
 
 首次先运行 `build`，确认 Actions 成功并可下载 ZIP；配置 Google 身份后运行 `status`，确认能查询到目标扩展的线上版本和审核状态。只执行这两个操作不会更改商店内容。
 
-日常更新时修改公开源码，同时递增 `package.json` 与 `extension-tracker/manifest.json` 的版本，提交到 `main`，再手动运行 `upload` 或 `publish`。Google 不接受重复版本号；工作流不会自动修改或提交版本号。开发调试版的版本不要求与商店同步。
+日常更新时修改公开源码，同时递增 `package.json` 与 `extension-tracker/manifest.json` 的版本，经过 PR 检查和审阅后合并到 `main`，再手动运行发布工作流。需要先把包上传为草稿并检查时选择 `upload`；确认可以送审后选择 `publish`。`publish` 会重新构建、上传并提交审核。Google 不接受重复版本号；工作流不会自动修改或提交版本号。开发调试版的版本不要求与商店同步。
+
+如果暂不提交审核，选择 `build`、`status` 或 `upload`，不要选择 `publish`。
 
 API 返回“已提交审核”不代表已经公开。审核结果、账号问题及商店文案或隐私披露的修改仍以开发者后台为准；本工作流不会改动商店文案、图片、可见性或账号设置，也不会申请跳过审核。
 

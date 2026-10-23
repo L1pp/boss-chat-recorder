@@ -56,8 +56,10 @@ function makePopup({ popupView = null, sendMessage = async () => ({ ok: false, e
   };
 }
 
-function view(accountUid, contactCount = 0, messageCount = 0, progress = null, updatedAt = '2026-10-17T12:00:00.000Z') {
+function view(accountUid, contactCount = 0, messageCount = 0, progress = null,
+  updatedAt = '2026-10-17T12:00:00.000Z', history = undefined) {
   return { accountUid, summary: { contactCount, messageCount }, progress,
+    hasCollectionHistory: history ?? (Boolean(progress) || contactCount > 0 || messageCount > 0),
     verificationRequired: progress?.verificationRequired ?? false, updatedAt };
 }
 
@@ -208,6 +210,17 @@ test('existing local polling exits the first-run view for running, verification,
   assert.match(running.elements.get('#progress').textContent, /正在采集/);
   assert.match(running.elements.get('#status').textContent, /首次采集已启动/);
 
+  const stopping = await popupAfterFirstRunPoll({
+    kind: 'api_v1', status: 'stopping', state: 'stopping', active: true, finalizing: true,
+  });
+  assert.equal(stopping.elements.get('#first-run-guide').hidden, true);
+  assert.equal(stopping.elements.get('#progress-card').hidden, false);
+  assert.match(stopping.elements.get('#progress').textContent, /正在保存停止前已读取的内容/);
+  assert.match(stopping.elements.get('#status').textContent, /正在保存停止前已读取的内容/);
+  assert.equal(stopping.elements.get('#update-incremental').disabled, true);
+  assert.equal(stopping.elements.get('#stop').hidden, false);
+  assert.equal(stopping.elements.get('#stop').disabled, false);
+
   const verification = await popupAfterFirstRunPoll({
     kind: 'api_v1', status: 'interrupted', state: 'interrupted', active: false,
     errorCode: 'SITE_VERIFICATION_REQUIRED', verificationRequired: true,
@@ -246,6 +259,37 @@ test('a completed empty collection is history, not a first-run prompt', async ()
   assert.equal(popup.elements.get('#first-run-guide').hidden, true);
   assert.equal(popup.elements.get('#update-incremental').textContent, '更新变化会话');
   assert.equal(popup.elements.get('#export-actions').hidden, false);
+});
+
+test('account history keeps a zero-count view out of first-run when this tab has no progress', async () => {
+  const popup = makePopup({ popupView: view('accountA', 0, 0, null,
+    '2026-10-17T12:00:00.000Z', true), sendMessage: async message => {
+    assert.equal(message.type, 'GET_BULK_PROGRESS');
+    return { ok: true, accountUid: 'accountA', summary: { contactCount: 0, messageCount: 0 },
+      progress: null, hasCollectionHistory: true };
+  } });
+  await popup.settle();
+  assert.equal(popup.elements.get('#first-run-guide').hidden, true);
+  assert.equal(popup.elements.get('#update-incremental').textContent, '更新变化会话');
+  const timer = [...popup.timers.values()].find(item => item.delay === 10000);
+  assert.ok(timer);
+  await popup.fireTimer(timer);
+  assert.equal(popup.runtimeMessages.map(message => message.type).join(','), 'GET_BULK_PROGRESS');
+  assert.equal(popup.elements.get('#first-run-guide').hidden, true);
+  assert.equal(popup.elements.get('#progress-card').hidden, false);
+  assert.equal(popup.elements.get('#update-incremental').textContent, '更新变化会话');
+});
+
+test('an old zero-count cache without collection history is unknown, not a confirmed first run', async () => {
+  const popup = makePopup({ popupView: {
+    accountUid: 'accountA', summary: { contactCount: 0, messageCount: 0 }, progress: null,
+    verificationRequired: false, updatedAt: '2026-10-17T12:00:00.000Z',
+  } });
+  await popup.settle();
+
+  assert.equal(popup.elements.get('#first-run-guide').hidden, true);
+  assert.equal(popup.elements.get('#update-incremental').textContent, '开始采集');
+  assert.equal(popup.elements.get('#update-incremental').disabled, false);
 });
 
 test('paused, verification, and finalizing states retain their distinct actions', async () => {
@@ -305,6 +349,59 @@ test('an unsupported page keeps its error state and opening the popup still only
   assert.match(popup.elements.get('#status').textContent, /打开 BOSS 直聘沟通页/);
   assert.deepEqual(popup.runtimeMessages.map(message => message.type), ['GET_STATE']);
   assert.deepEqual(popup.storageKeys, [POPUP_VIEW_KEY]);
+});
+
+test('a view refresh during a pending first start clears its temporary label and keeps the newer account view', async () => {
+  let resolveStart;
+  const startGate = new Promise(resolve => { resolveStart = resolve; });
+  const localView = view('accountA', 0, 0);
+  const popup = makePopup({ popupView: localView, sendMessage: async message => {
+    assert.equal(message.type, 'START_UPDATE');
+    return startGate;
+  } });
+  await popup.settle();
+  assert.equal(popup.elements.get('#first-run-guide').hidden, false);
+
+  const pendingStart = popup.elements.get('#update-incremental').listeners.get('click')();
+  await popup.settle();
+  assert.equal(popup.runtimeMessages.length, 1);
+  assert.equal(popup.elements.get('#update-incremental').textContent, '正在启动首次采集…');
+
+  localView.accountUid = 'accountB';
+  localView.summary = { contactCount: 4, messageCount: 20 };
+  localView.progress = { kind: 'api_v1', status: 'running', state: 'running', active: true };
+  localView.verificationRequired = false;
+  await popup.elements.get('#refresh').listeners.get('click')();
+  assert.equal(popup.elements.get('#account').textContent, 'accountB');
+  assert.equal(popup.elements.get('#contact-count').textContent, '4');
+  assert.equal(popup.elements.get('#message-count').textContent, '20');
+  assert.equal(popup.elements.get('#update-incremental').textContent, '正在更新');
+
+  resolveStart({ ok: true, accountUid: 'accountA', summary: { contactCount: 0, messageCount: 0 },
+    progress: { kind: 'api_v1', status: 'running', state: 'running', active: true } });
+  await pendingStart;
+  assert.equal(popup.elements.get('#account').textContent, 'accountB',
+    'the stale START response cannot replace the refreshed account view');
+  assert.equal(popup.elements.get('#contact-count').textContent, '4');
+  assert.equal(popup.elements.get('#update-incremental').textContent, '正在更新',
+    'the prior first-collection label is scoped to its request and does not leak');
+  assert.equal(popup.runtimeMessages.length, 1, 'view refresh and stale response add no request');
+});
+
+test('interrupted, stopped, and failed collections can resume at zero or nonzero counts', async () => {
+  for (const state of ['interrupted', 'stopped', 'failed']) {
+    for (const [contacts, messages] of [[0, 0], [3, 15]]) {
+      const popup = makePopup({ popupView: view('accountA', contacts, messages, {
+        kind: 'api_v1', status: state, state, active: false,
+      }) });
+      await popup.settle();
+      assert.equal(popup.elements.get('#update-incremental').textContent, '继续上次采集', `${state} ${contacts}/${messages}`);
+      assert.equal(popup.elements.get('#update-incremental').disabled, false, `${state} remains retryable`);
+      assert.equal(popup.elements.get('#stop').hidden, true, `${state} is no longer running`);
+      assert.equal(popup.elements.get('#first-run-guide').hidden, true,
+        `${state} has known progress even with zero saved counts`);
+    }
+  }
 });
 
 test('a cached UID is only a preview: one start click follows the fresh account returned by the worker', async () => {
