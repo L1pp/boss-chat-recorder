@@ -15,6 +15,18 @@ AI 意见仍需维护者核实，不设置 AI 必须批准的合并条件，不�
 
 官方配置与用量说明：[GitHub 集成](https://learn.chatgpt.com/docs/third-party/github)、[Code Review 用量](https://learn.chatgpt.com/docs/pricing#what-counts-as-code-review-usage)。
 
+### Codex 接入验收与故障定位
+
+用一次新建的普通（非草稿）PR 验证自动审阅。设置更改后重新进入仓库设置确认状态仍然保留；如果仓库条目消失或开关恢复，先检查当前 ChatGPT/GitHub 连接及该仓库是否仍获授权。
+
+判断时分开看三个阶段：
+
+1. **仓库可访问**：仓库出现在 Codex 的代码审查设置中，说明连接可见；这本身不代表自动审阅已运行。
+2. **自动触发已配置**：仓库自动审阅已开启，个人触发偏好包含新 PR（或需要的后续推送），并符合草稿设置。开关显示开启只说明设置状态，不证明某次审阅已执行。
+3. **本次审阅已运行**：在目标 PR 的时间线、评论及 Reviews 中查看审阅者身份和时间；以触发之后 `chatgpt-codex-connector[bot]` 留下的实际审阅或评论为运行证据。反应和 Checks 可作辅助线索，但没有 Check 条目不单独说明审阅失败。
+
+若新 PR 没有出现审阅记录，先核对连接权限、仓库自动审阅设置、个人触发偏好、PR 是否为草稿，以及记录时间是否晚于 PR 创建或推送时间。不要把仓库列表或蓝色开关当成运行成功，也不要同时反复推送或手动发送 `@codex review`；手动请求会另行触发审阅并消耗用量。
+
 ## Greptile
 
 1. 打开 [Greptile](https://app.greptile.com/)，可直接用 GitHub 登录；首次登录会建立 Greptile 账号。
