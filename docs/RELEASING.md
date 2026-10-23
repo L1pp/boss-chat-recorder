@@ -25,7 +25,7 @@ GitHub Actions is the automation runner. A GitHub Release is a versioned public 
 
 The ZIP contains only runtime files explicitly listed in `scripts/package-extension.mjs`, with `manifest.json` at its root. Source-only modules, tests, synthetic demos, store artwork, credentials, local debug files, and personal-data directories are excluded. Workflow artifacts are retained for 14 days; GitHub Release attachments remain with the release.
 
-Successful push/PR checks also generate a `boss-chat-recorder-ci` ZIP for inspection before merge. CI does not request Google tokens or contact the store.
+Successful push/PR checks also generate `boss-chat-recorder-Linux-ci` and `boss-chat-recorder-Windows-ci` artifacts containing the extension ZIP for inspection before merge. CI does not request Google tokens or contact the store.
 
 Local preview packaging uses Node.js 24 without dependency installation:
 

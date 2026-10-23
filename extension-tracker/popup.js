@@ -101,7 +101,8 @@ function renderLanguage() {
   accountLabel.textContent = renderMessage(accountPresentation);
   progressLabel.textContent = renderMessage(progressPresentation);
   statusLabel.textContent = renderMessage(statusPresentation);
-  setEnabled(Boolean(currentAccountUid));
+  // Translation preserves action availability, including recovery without a cached UID.
+  if (updateIncrementalButton) updateIncrementalButton.textContent = primaryActionLabel();
 }
 
 function progressState(progress) {
@@ -159,9 +160,9 @@ function popupViewFromPayload(payload, fallbackAccountUid = currentAccountUid) {
 async function readLocalPopupView() {
   const includePreference = !preferenceRead;
   const revision = languageRevision;
-  preferenceRead = true;
   const keys = includePreference ? [POPUP_VIEW_STORAGE_KEY, LANGUAGE_STORAGE_KEY] : POPUP_VIEW_STORAGE_KEY;
   const record = await withTimeout(chrome.storage.local.get(keys), 5000, 'POPUP_VIEW_TIMEOUT');
+  preferenceRead = true;
   if (includePreference && revision === languageRevision) {
     locale = resolveLocale(record?.[LANGUAGE_STORAGE_KEY], browserLanguage);
     renderLanguage();

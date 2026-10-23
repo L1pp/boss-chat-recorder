@@ -27,7 +27,7 @@ GitHub Actions 是执行自动化的运行平台；GitHub Release 是附版本�
 
 ZIP 仅包含 `scripts/package-extension.mjs` 明确列出的公开运行文件，`manifest.json` 位于 ZIP 根。源码、测试、合成演示、商店素材、凭据、本机调试文件和个人数据目录都不进入扩展 ZIP。工作流产物保留 14 天；GitHub Release 的附件长期保留。
 
-现有 push / PR 离线检查成功后也会生成 `boss-chat-recorder-ci` ZIP 产物，便于在合并前下载检查；该 CI 流程不申请 Google 令牌、不访问商店。
+现有 push / PR 离线检查成功后也会生成 `boss-chat-recorder-Linux-ci` 和 `boss-chat-recorder-Windows-ci` 产物，内含扩展 ZIP，便于在合并前下载检查；该 CI 流程不申请 Google 令牌、不访问商店。
 
 本地打包也可使用 Node.js 24，无需安装依赖：
 

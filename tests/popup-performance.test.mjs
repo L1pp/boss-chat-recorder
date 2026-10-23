@@ -623,3 +623,76 @@ test('a late preference read cannot overwrite a language selected in this popup'
   assert.equal(popup.elements.get('#update-incremental').textContent, 'Update changed conversations');
   assert.equal(popup.runtimeMessages.length, 0);
 });
+
+test('language changes preserve recovery after an error hides the current account', async () => {
+  for (const error of ['ARCHIVE_KEY_UNAVAILABLE', 'ARCHIVE_DECRYPT_FAILED', 'UNSUPPORTED_PAGE',
+    'ACCOUNT_IDENTITY_UNAVAILABLE']) {
+    const fromPoll = error === 'ACCOUNT_IDENTITY_UNAVAILABLE';
+    const popup = makePopup({ popupView: fromPoll ? view('accountA', 2, 9) : null,
+      sendMessage: async request => request.type === 'START_UPDATE'
+        ? { ok: true, accountUid: 'accountA', summary: { contactCount: 2, messageCount: 9 },
+          progress: { state: 'running', active: true } }
+        : { ok: false, error } });
+    await popup.settle();
+    if (fromPoll) await popup.fireTimer([...popup.timers.values()].find(timer => timer.delay === 10000));
+    assert.equal(popup.elements.get('#account').textContent, '尚无本地记录');
+    assert.equal(popup.elements.get('#update-incremental').disabled, false, `${error}: recovery is available`);
+    const controls = ['#update-incremental', '#update-full', '#stop', '#export-latest', '#export-all', '#backup', '#clear'];
+    const availability = controls.map(id => popup.elements.get(id).disabled);
+    const calls = popup.runtimeMessages.length;
+    await popup.selectLanguage('en');
+    assert.deepEqual(controls.map(id => popup.elements.get(id).disabled), availability,
+      `${error}: translating the view preserves every action's availability`);
+    assert.equal(popup.runtimeMessages.length, calls, 'switching language does not probe or retry');
+    await popup.elements.get('#update-incremental').listeners.get('click')();
+    assert.equal(popup.runtimeMessages.at(-1).type, 'START_UPDATE');
+    assert.equal(popup.elements.get('#account').textContent, 'accountA');
+    assert.equal(popup.elements.get('#update-incremental').disabled, true, 'a running retry prevents duplicate starts');
+  }
+});
+
+test('manual refresh can restore the saved language after the first local read fails or times out', async () => {
+  for (const failure of ['rejected', 'timeout']) {
+    let reads = 0, finishOldRead;
+    const cached = view('accountA', 2, 9);
+    const popup = makePopup({ storageGet: async () => {
+      if (++reads === 1) {
+        if (failure === 'rejected') throw new Error('synthetic local read failure');
+        return new Promise(resolve => { finishOldRead = resolve; });
+      }
+      return { [POPUP_VIEW_KEY]: cached, [LANGUAGE_KEY]: 'en' };
+    } });
+    await popup.settle();
+    if (failure === 'timeout') {
+      await popup.fireTimer([...popup.timers.values()].find(timer => timer.delay === 5000));
+      await popup.settle();
+    }
+    assert.equal(popup.document.documentElement.lang, 'zh-CN');
+    await popup.elements.get('#refresh').listeners.get('click')();
+    assert.equal(popup.document.documentElement.lang, 'en');
+    assert.equal(popup.elements.get('#account').textContent, 'accountA');
+    assert.deepEqual(popup.storageKeys, [initialStorageKeys, initialStorageKeys],
+      'the manual cache refresh reads the preference in the same existing storage call');
+    assert.equal(popup.runtimeMessages.length, 0);
+    if (finishOldRead) {
+      finishOldRead({ [POPUP_VIEW_KEY]: cached, [LANGUAGE_KEY]: 'zh-CN' });
+      await popup.settle();
+      assert.equal(popup.document.documentElement.lang, 'en', 'the timed-out read stays obsolete');
+    }
+  }
+});
+
+test('known message-save and checkpoint failures explain the problem in both languages', async () => {
+  for (const code of ['BULK_SNAPSHOT_SAVE_FAILED', 'BULK_CHECKPOINT_FAILED']) {
+    const popup = makePopup({ popupView: view('accountA', 2, 9, {
+      state: 'failed', active: false, errorCode: code, errorDetails: '旧语言的保存诊断',
+    }) });
+    await popup.settle();
+    assert.equal(popup.elements.get('#status').textContent, popupI18n.translate('zh-CN', `error.${code}`));
+    await popup.selectLanguage('en');
+    assert.equal(popup.elements.get('#status').textContent, popupI18n.translate('en', `error.${code}`));
+    assert.match(popup.elements.get('#progress').textContent, /could not be confirmed/u);
+    assert.equal(popup.elements.get('#message-count').textContent, '9');
+    assert.equal(popup.runtimeMessages.length, 0);
+  }
+});
