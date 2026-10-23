@@ -91,7 +91,8 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.CWS_SERVICE_ACCOUNT }}
           token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          access_token_scopes: >-
+            ${{ inputs.operation == 'status' && 'https://www.googleapis.com/auth/chromewebstore.readonly' || 'https://www.googleapis.com/auth/chromewebstore' }}
           create_credentials_file: false
           export_environment_variables: false
 

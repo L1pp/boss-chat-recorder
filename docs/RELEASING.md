@@ -35,6 +35,8 @@ npm run package:extension -- --output /path/to/extension.zip
 
 采用 GitHub OIDC → Google Workload Identity Federation → 发布服务账号 → 短期 OAuth access token。无需在仓库保存服务账号 JSON 私钥、个人 refresh token 或浏览器 Cookie。Google 官方认证组件仅在执行商店任务时生成访问令牌，不生成可进入构建产物的凭据文件。
 
+`status` 仅申请 Google 官方的 `chromewebstore.readonly` 作用域；`upload` 和 `publish` 才申请 `chromewebstore` 写入作用域。
+
 配置步骤：
 
 1. 在自己的 Google Cloud 项目启用 `chromewebstore.googleapis.com`、`iam.googleapis.com`、`iamcredentials.googleapis.com` 和 `sts.googleapis.com`。
