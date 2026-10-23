@@ -67,6 +67,12 @@ export const allowedFiles = new Set([
   'examples/index.html',
 ]);
 for (const size of [16, 32, 48, 128]) allowedFiles.add(`extension-tracker/icons/icon-${size}.png`);
+allowedFiles.add('docs/assets/icon.png');
+for (const language of ['en', 'zh-CN']) {
+  for (const image of ['overview.png', 'readonly.png', 'incremental.png', 'export.png', 'start.png', 'github-social.png', 'promo.png']) {
+    allowedFiles.add(`docs/assets/${language}/${image}`);
+  }
+}
 for (const account of ['account-a', 'account-b']) {
   for (const file of ['state.json', 'runtime.json', 'runtime-no-change.json',
     'ai-export-all.json', 'ai-export-latest.json', 'ai-export-no-change.json']) {
@@ -84,6 +90,19 @@ export const publicExcludedFiles = new Set([
 const packageMetadata = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const publicProfile = packageMetadata.showcaseProfile === 'public';
 if (publicProfile) for (const file of publicExcludedFiles) allowedFiles.delete(file);
+
+const pngDimensions = new Map([
+  ['store/assets/small-promo.png', [440, 280]],
+  ['docs/assets/icon.png', [1254, 1254]],
+]);
+for (const language of ['en', 'zh-CN']) {
+  const directory = `docs/assets/${language}`;
+  for (const image of ['overview.png', 'readonly.png', 'incremental.png', 'export.png', 'start.png']) {
+    pngDimensions.set(`${directory}/${image}`, [1280, 800]);
+  }
+  pngDimensions.set(`${directory}/github-social.png`, [1280, 640]);
+  pngDimensions.set(`${directory}/promo.png`, [440, 280]);
+}
 
 const sensitivePatterns = [
   ['private key', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/u],
@@ -122,8 +141,7 @@ async function check() {
         throw new Error(`Invalid PNG asset: ${file}`);
       }
       const size = /icon-(\d+)\.png$/u.exec(file)?.[1];
-      const expected = size ? [Number(size), Number(size)] :
-        file.endsWith('small-promo.png') ? [440, 280] : [1280, 800];
+      const expected = size ? [Number(size), Number(size)] : pngDimensions.get(file) ?? [1280, 800];
       if (bytes.length < 24 || bytes.readUInt32BE(16) !== expected[0] || bytes.readUInt32BE(20) !== expected[1]) {
         throw new Error(`Unexpected image dimensions: ${file}`);
       }
